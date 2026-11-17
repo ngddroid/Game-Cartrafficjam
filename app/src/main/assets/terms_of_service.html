@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Terms of Service · Traffic Jam Rush</title>
+<style>
+  :root {
+    --sky-top: #4FC3F7;
+    --sky-bottom: #1E88E5;
+    --navy: #1A3A6B;
+    --navy-dark: #0F2547;
+    --cream: #FFF8E7;
+    --cream-edge: #F3E2BC;
+    --yellow: #FFC107;
+    --yellow-dark: #E0A000;
+    --orange: #FF9800;
+    --green: #7CB342;
+    --pink: #EC407A;
+    --blue: #1E88E5;
+    --text: #2B2B3A;
+    --muted: #5C5F73;
+    --road: #3D4250;
+    --font: "Fredoka", "Baloo 2", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 70%, #1565C0 100%) fixed;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Hero banner ---------- */
+  .hero {
+    position: relative;
+    padding: 28px 16px 0;
+    text-align: center;
+    overflow: hidden;
+  }
+  .cloud {
+    position: absolute;
+    background: rgba(255,255,255,0.85);
+    border-radius: 50px;
+    filter: blur(0.3px);
+  }
+  .cloud::before, .cloud::after {
+    content: "";
+    position: absolute;
+    background: inherit;
+    border-radius: 50%;
+  }
+  .cloud.c1 { width: 84px; height: 26px; top: 22px; left: -10px; opacity: .9; }
+  .cloud.c1::before { width: 38px; height: 38px; top: -18px; left: 14px; }
+  .cloud.c1::after { width: 30px; height: 30px; top: -12px; left: 42px; }
+  .cloud.c2 { width: 70px; height: 22px; top: 62px; right: -6px; opacity: .75; }
+  .cloud.c2::before { width: 32px; height: 32px; top: -16px; left: 12px; }
+  .cloud.c2::after { width: 26px; height: 26px; top: -10px; left: 36px; }
+
+  .badge-top {
+    display: inline-block;
+    padding: 4px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--navy);
+    background: var(--yellow);
+    border: 3px solid var(--navy);
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--navy);
+  }
+  .title {
+    margin: 6px 0 4px;
+    font-size: 40px;
+    line-height: 1.05;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: .5px;
+    -webkit-text-stroke: 2px var(--navy);
+    paint-order: stroke fill;
+    text-shadow: 0 4px 0 var(--navy), 0 7px 10px rgba(15,37,71,.35);
+  }
+  .subtitle {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #EAF6FF;
+    text-shadow: 0 1px 0 rgba(15,37,71,.5);
+  }
+  .bus-wrap {
+    position: relative;
+    z-index: 2;
+    height: 96px;
+    margin-top: 4px;
+  }
+  .bus {
+    width: 172px;
+    height: 96px;
+    animation: bob 2.4s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-5px) rotate(-1deg); }
+  }
+
+  /* ---------- Road strip ---------- */
+  .road {
+    position: relative;
+    height: 46px;
+    margin: -10px -16px 0;
+    background: var(--road);
+    border-top: 5px solid #8BC34A;
+    border-bottom: 5px solid #5D6170;
+    box-shadow: inset 0 6px 0 rgba(0,0,0,.18);
+    overflow: hidden;
+  }
+  .road::after {
+    content: "";
+    position: absolute;
+    left: -60px;
+    right: -60px;
+    top: 50%;
+    height: 6px;
+    margin-top: -3px;
+    background: repeating-linear-gradient(90deg, #fff 0 28px, transparent 28px 56px);
+    border-radius: 3px;
+    animation: lanes 1.6s linear infinite;
+  }
+  @keyframes lanes {
+    from { transform: translateX(0); }
+    to { transform: translateX(-56px); }
+  }
+
+  /* ---------- Sticky TOC ---------- */
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: rgba(26,58,107,.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 0 rgba(15,37,71,.35);
+  }
+  .toc::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    text-decoration: none;
+    white-space: nowrap;
+    background: var(--cream);
+    border: 2px solid var(--navy-dark);
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--navy-dark);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .chip:active { transform: translateY(3px); box-shadow: 0 0 0 var(--navy-dark); }
+  .chip:nth-child(5n+1) { background: #FFE082; }
+  .chip:nth-child(5n+2) { background: #C5E1A5; }
+  .chip:nth-child(5n+3) { background: #F8BBD0; }
+  .chip:nth-child(5n+4) { background: #B3E5FC; }
+  .chip:nth-child(5n+5) { background: #FFCC80; }
+
+  /* ---------- Content ---------- */
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 18px 14px 8px;
+  }
+  .updated {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 18px;
+    padding: 8px 14px;
+    width: fit-content;
+    max-width: 100%;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    background: var(--yellow);
+    border: 3px solid var(--navy);
+    border-radius: 14px;
+    box-shadow: 0 4px 0 var(--navy);
+  }
+  .card {
+    position: relative;
+    margin: 0 0 20px;
+    padding: 18px 16px 16px;
+    background: var(--cream);
+    border: 4px solid var(--navy);
+    border-radius: 22px;
+    box-shadow: 0 6px 0 var(--navy), 0 12px 18px rgba(15,37,71,.25);
+    scroll-margin-top: 70px;
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise .55s cubic-bezier(.2,.9,.3,1.2) forwards;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 6px;
+    height: 6px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.75);
+  }
+  .card:nth-of-type(1)  { animation-delay: .05s; }
+  .card:nth-of-type(2)  { animation-delay: .10s; }
+  .card:nth-of-type(3)  { animation-delay: .15s; }
+  .card:nth-of-type(4)  { animation-delay: .20s; }
+  .card:nth-of-type(5)  { animation-delay: .25s; }
+  .card:nth-of-type(6)  { animation-delay: .30s; }
+  .card:nth-of-type(7)  { animation-delay: .35s; }
+  .card:nth-of-type(8)  { animation-delay: .40s; }
+  .card:nth-of-type(9)  { animation-delay: .45s; }
+  .card:nth-of-type(10) { animation-delay: .50s; }
+  .card:nth-of-type(11) { animation-delay: .55s; }
+  .card:nth-of-type(12) { animation-delay: .60s; }
+  .card:nth-of-type(n+13) { animation-delay: .65s; }
+  @keyframes rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 10px;
+    font-size: 21px;
+    line-height: 1.2;
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .num {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    border: 3px solid var(--navy);
+    border-radius: 50%;
+    box-shadow: 0 3px 0 var(--navy), inset 0 -4px 0 rgba(0,0,0,.15), inset 0 3px 0 rgba(255,255,255,.35);
+    text-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+  .card:nth-of-type(5n+1) .num { background: var(--orange); }
+  .card:nth-of-type(5n+2) .num { background: var(--green); }
+  .card:nth-of-type(5n+3) .num { background: var(--pink); }
+  .card:nth-of-type(5n+4) .num { background: var(--blue); }
+  .card:nth-of-type(5n+5) .num { background: var(--yellow); color: var(--navy); text-shadow: none; }
+  .card p { margin: 0 0 10px; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .card ul { margin: 0 0 10px; padding: 0; list-style: none; }
+  .card li {
+    position: relative;
+    margin: 0 0 8px;
+    padding-left: 26px;
+  }
+  .card li::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: .55em;
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    background: var(--yellow);
+    border: 2px solid var(--navy);
+    transform: rotate(45deg);
+  }
+  strong { color: var(--navy); }
+  .note {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    font-size: 15px;
+    background: #FFF1C4;
+    border: 2px dashed var(--yellow-dark);
+    border-radius: 14px;
+  }
+  .url, .email {
+    font-weight: 700;
+    color: var(--blue);
+    word-break: break-all;
+  }
+  .contact-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 12px;
+    background: #fff;
+    border: 3px solid var(--navy);
+    border-radius: 16px;
+    box-shadow: 0 4px 0 var(--navy);
+  }
+  .contact-box svg { flex: 0 0 auto; }
+  .contact-box div { min-width: 0; }
+  .contact-box small { display: block; color: var(--muted); font-size: 13px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 10px;
+    text-align: center;
+    color: #EAF6FF;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .footer-road {
+    position: relative;
+    height: 64px;
+    margin-top: 14px;
+    background: var(--road);
+    border-top: 5px solid #8BC34A;
+    overflow: hidden;
+  }
+  .footer-road::before {
+    content: "";
+    position: absolute;
+    left: -60px;
+    right: -60px;
+    top: 50%;
+    height: 5px;
+    margin-top: -2px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 24px, transparent 24px 48px);
+    animation: lanes 1.2s linear infinite;
+  }
+  .mini-car {
+    position: absolute;
+    top: 9px;
+    width: 46px;
+    height: 22px;
+    animation: drive 9s linear infinite;
+  }
+  .mini-car.two { top: 36px; animation-duration: 12s; animation-delay: -5s; animation-direction: reverse; }
+  .mini-car.three { animation-duration: 10s; animation-delay: -7s; }
+  @keyframes drive {
+    from { left: -60px; }
+    to { left: calc(100% + 20px); }
+  }
+  .copy { padding: 12px 16px 22px; }
+
+  @media (min-width: 480px) {
+    .title { font-size: 46px; }
+    main { padding-left: 20px; padding-right: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+    html { scroll-behavior: auto; }
+    .card { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="cloud c1" aria-hidden="true"></span>
+  <span class="cloud c2" aria-hidden="true"></span>
+  <span class="badge-top">Traffic Jam Rush</span>
+  <h1 class="title">Terms of Service</h1>
+  <p class="subtitle">The rules of the road for our game</p>
+  <div class="bus-wrap" aria-hidden="true">
+    <svg class="bus" viewBox="0 0 172 96" role="img" aria-label="Cartoon bus">
+      <ellipse cx="86" cy="90" rx="70" ry="6" fill="rgba(15,37,71,.35)"/>
+      <rect x="14" y="20" width="144" height="62" rx="16" fill="#E0A000"/>
+      <rect x="14" y="14" width="144" height="60" rx="16" fill="#FFC107" stroke="#1A3A6B" stroke-width="4"/>
+      <rect x="22" y="20" width="128" height="10" rx="5" fill="#FFE082"/>
+      <rect x="22" y="36" width="20" height="20" rx="5" fill="#4FC3F7" stroke="#1A3A6B" stroke-width="3"/>
+      <rect x="48" y="36" width="20" height="20" rx="5" fill="#4FC3F7" stroke="#1A3A6B" stroke-width="3"/>
+      <rect x="74" y="36" width="20" height="20" rx="5" fill="#4FC3F7" stroke="#1A3A6B" stroke-width="3"/>
+      <rect x="100" y="36" width="20" height="20" rx="5" fill="#4FC3F7" stroke="#1A3A6B" stroke-width="3"/>
+      <rect x="126" y="36" width="24" height="28" rx="6" fill="#81D4FA" stroke="#1A3A6B" stroke-width="3"/>
+      <path d="M26 39 l8 0 l-6 10 z" fill="#fff" opacity=".7"/>
+      <path d="M52 39 l8 0 l-6 10 z" fill="#fff" opacity=".7"/>
+      <path d="M78 39 l8 0 l-6 10 z" fill="#fff" opacity=".7"/>
+      <path d="M104 39 l8 0 l-6 10 z" fill="#fff" opacity=".7"/>
+      <rect x="150" y="60" width="8" height="8" rx="3" fill="#FFF59D" stroke="#1A3A6B" stroke-width="2"/>
+      <rect x="14" y="60" width="7" height="8" rx="3" fill="#EF5350" stroke="#1A3A6B" stroke-width="2"/>
+      <circle cx="44" cy="76" r="11" fill="#2B2B3A" stroke="#1A3A6B" stroke-width="3"/>
+      <circle cx="44" cy="76" r="4" fill="#B0BEC5"/>
+      <circle cx="126" cy="76" r="11" fill="#2B2B3A" stroke="#1A3A6B" stroke-width="3"/>
+      <circle cx="126" cy="76" r="4" fill="#B0BEC5"/>
+      <g transform="translate(86 4)">
+        <rect x="-30" y="-2" width="60" height="16" rx="8" fill="#1A3A6B"/>
+        <path d="M-20 6 H12 M4 -1 L13 6 L4 13" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </svg>
+  </div>
+  <div class="road" aria-hidden="true"></div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a class="chip" href="#accept">Acceptance</a>
+  <a class="chip" href="#license">License</a>
+  <a class="chip" href="#coins">Coins &amp; Items</a>
+  <a class="chip" href="#ads">Rewarded Ads</a>
+  <a class="chip" href="#conduct">Conduct</a>
+  <a class="chip" href="#ip">Ownership</a>
+  <a class="chip" href="#disclaimer">Disclaimers</a>
+  <a class="chip" href="#liability">Liability</a>
+  <a class="chip" href="#termination">Termination</a>
+  <a class="chip" href="#changes">Changes</a>
+  <a class="chip" href="#law">Governing Law</a>
+  <a class="chip" href="#contact">Contact</a>
+</nav>
+
+<main>
+  <div class="updated">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" fill="#fff" stroke="#1A3A6B" stroke-width="2.5"/><path d="M3 10h18" stroke="#1A3A6B" stroke-width="2.5"/><path d="M8 3v4M16 3v4" stroke="#1A3A6B" stroke-width="2.5" stroke-linecap="round"/></svg>
+    Last updated: November 4, 2026
+  </div>
+
+    <section class="card" id="accept">
+    <h2><span class="num">1</span>Acceptance of Terms</h2>
+    <p>These Terms of Service ("Terms") are an agreement between you and <strong>Your Studio</strong> ("we", "us") for the Traffic Jam Rush game (the "Game").</p><p>By downloading, installing or playing the Game, you agree to these Terms and to our Privacy Policy. If you don't agree, please don't use the Game.</p>
+  </section>
+
+  <section class="card" id="license">
+    <h2><span class="num">2</span>License to Use</h2>
+    <p>We give you a personal, limited, non-exclusive, non-transferable and revocable license to install and play the Game on devices you own or control, for your own non-commercial entertainment.</p><p>You may not sell, rent, sublicense, or redistribute the Game or any part of it.</p>
+  </section>
+
+  <section class="card" id="coins">
+    <h2><span class="num">3</span>Virtual Items &amp; Coins</h2>
+    <ul><li>Coins, boosters, unlocked levels, collections and vehicle skins are virtual items that exist only inside the Game.</li><li>They have <strong>no real-money value</strong> and cannot be sold, transferred, or exchanged for cash or anything of value.</li><li>Virtual items may be changed, rebalanced or reset, for example after an update, a reinstall, or if you use Reset Progress.</li></ul>
+  </section>
+
+  <section class="card" id="ads">
+    <h2><span class="num">4</span>Rewarded Ads</h2>
+    <p>Some features, such as unlocking a level, a collection, an extra parking spot or a booster, can be earned by watching an optional rewarded ad.</p><ul><li>Watching ads is always optional.</li><li>The reward is granted only after the ad has been watched to completion.</li><li>Ads depend on third-party networks and your connection, so their availability is not guaranteed. We are not responsible for content shown in third-party ads.</li></ul>
+  </section>
+
+  <section class="card" id="conduct">
+    <h2><span class="num">5</span>User Conduct</h2>
+    <p>Please play fair. You agree not to:</p><ul><li>cheat, use bots, or exploit bugs to gain coins or items;</li><li>reverse engineer, decompile, or disassemble the Game, except where the law allows it;</li><li>modify, hack, or distribute modified versions of the Game to exploit it or bypass ads;</li><li>use the Game for any unlawful purpose.</li></ul>
+  </section>
+
+  <section class="card" id="ip">
+    <h2><span class="num">6</span>Intellectual Property</h2>
+    <p>The Game and everything in it, including its code, artwork, vehicles, characters, sounds, music, levels, text and logos, are owned by <strong>Your Studio</strong> or its licensors and are protected by copyright and other laws.</p><p>These Terms do not give you any ownership rights. All rights not expressly granted are reserved.</p>
+  </section>
+
+  <section class="card" id="disclaimer">
+    <h2><span class="num">7</span>Disclaimers</h2>
+    <p>The Game is provided <strong>"as is"</strong> and <strong>"as available"</strong>, without warranties of any kind, whether express or implied, including fitness for a particular purpose and non-infringement.</p><p>We work hard to make the Game fun and bug-free, but we don't promise it will always be error-free, uninterrupted, or compatible with every device.</p>
+  </section>
+
+  <section class="card" id="liability">
+    <h2><span class="num">8</span>Limitation of Liability</h2>
+    <p>To the maximum extent permitted by law, Your Studio will not be liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of data, progress or virtual items, arising from your use of, or inability to use, the Game.</p><p>Some places don't allow these limits, so they may not fully apply to you.</p>
+  </section>
+
+  <section class="card" id="termination">
+    <h2><span class="num">9</span>Termination</h2>
+    <p>You can stop using the Game at any time by uninstalling it. We may suspend or end your license if you break these Terms. When the license ends, you must stop using the Game, and any virtual items are lost.</p>
+  </section>
+
+  <section class="card" id="changes">
+    <h2><span class="num">10</span>Changes to Terms</h2>
+    <p>We may update these Terms from time to time. The "Last updated" date at the top shows the latest version. If you keep playing after changes take effect, you accept the updated Terms.</p>
+  </section>
+
+  <section class="card" id="law">
+    <h2><span class="num">11</span>Governing Law</h2>
+    <p>These Terms are governed by the laws of your country of registration, without regard to conflict-of-law rules. Nothing in these Terms limits the consumer rights you have under the laws where you live.</p>
+  </section>
+
+  <section class="card" id="contact">
+    <h2><span class="num">12</span>Contact Us</h2>
+    <p>Questions about these Terms? We're happy to help.</p>
+    <div class="contact-box">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="7" width="36" height="26" rx="7" fill="#FFC107" stroke="#1A3A6B" stroke-width="3"/><path d="M5 11 L20 22 L35 11" fill="none" stroke="#1A3A6B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <strong>Your Studio</strong>
+        <span class="email">support@yourstudio.com</span>
+        <small>We usually reply within a few days.</small>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-road" aria-hidden="true">
+    <svg class="mini-car" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#EC407A" stroke="#1A3A6B" stroke-width="2"/><rect x="24" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M8 11 h10 M14 7 l4 4 l-4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="mini-car two" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#7CB342" stroke="#1A3A6B" stroke-width="2"/><rect x="10" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M38 11 h-10 M32 7 l-4 4 l4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="mini-car three" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#1E88E5" stroke="#1A3A6B" stroke-width="2"/><rect x="24" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M8 11 h10 M14 7 l4 4 l-4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="copy">© 2026 Your Studio · Traffic Jam Rush</div>
+</footer>
+
+<script>
+  document.querySelectorAll('.toc a').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>
