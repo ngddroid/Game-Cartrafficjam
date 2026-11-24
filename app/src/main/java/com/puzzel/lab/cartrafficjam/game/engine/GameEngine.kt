@@ -49,10 +49,10 @@ enum class Phase { INTRO, PLAYING, STUCK, WON }
 
 enum class VState { LOT, EXITING, PARKED, DEPARTING, CRANE, GONE }
 
-class Vehicle(val spec: VehicleSpec) {
+class Vehicle(val spec: VehicleSpec, seatScale: Int = 1) {
     val id get() = spec.id
     val type get() = spec.type
-    val seats get() = spec.type.seats
+    val seats = spec.type.seats * seatScale
     var color = spec.color
     var mystery = spec.mystery
     var state = VState.LOT
@@ -132,7 +132,8 @@ class GameEngine(
     var revivesUsed = 0
         private set
 
-    val vehicles = level.vehicles.map { Vehicle(it) }
+    val vehicles = level.vehicles.map { Vehicle(it, level.seatScale) }
+    private val loop get() = layout.loop
     private val byId = vehicles.associateBy { it.id }
     val grid = Grid(level.cols, level.rows).also { g -> level.vehicles.forEach { g.put(it) } }
     val slots = Array(SLOT_COUNT + 1) { i -> Slot(i < level.openSlots || i == VIP_SLOT) }
@@ -182,7 +183,7 @@ class GameEngine(
         passengerArt = PassengerArt(layout.passengerW, layout.passengerH)
         particles = Particles(layout.u)
         scene = SceneArt.render(layout, level, theme)
-        qS = FloatArray(queue.size) { i -> i * layout.passengerSpacing + layout.width * 0.6f }
+        qS = FloatArray(queue.size) { i -> queueTarget(i) + layout.width * 0.6f }
         vehicles.forEachIndexed { i, v ->
             v.home = layout.boardToScreen(v.spec.centerX, v.spec.centerY)
             if (v.state == VState.LOT) {
@@ -640,12 +641,24 @@ class GameEngine(
         particles.smoke(v.pos + Offset(0f, art.bodyL(v.type) * v.scale / 2), 0f, 1f, 3)
     }
 
+    /**
+     * Distance from the front of the line where passenger [i] should stand. In Crowd Loop the
+     * line moves up a whole row at a time once the front row has boarded.
+     */
+    fun queueTarget(i: Int): Float =
+        if (loop) (i / CROWD_LANES - qHead / CROWD_LANES) * layout.passengerSpacing
+        else (i - qHead) * layout.passengerSpacing
+
+    /** Screen position of waiting passenger [i]. */
+    fun queuePos(i: Int): Offset =
+        if (loop) layout.crowdPoint(qS[i], i % CROWD_LANES) else layout.queuePoint(qS[i])
+
     private fun updateQueue(dt: Float) {
         val sp = layout.passengerSpacing
-        val speed = 260 * layout.u
-        val visible = (layout.queueVisibleLength / sp).toInt() + 2
+        val speed = (if (loop) 150 else 260) * layout.u
+        val visible = ((layout.queueVisibleLength / sp).toInt() + 2) * (if (loop) CROWD_LANES else 1)
         for (i in qHead until queue.size) {
-            val target = (i - qHead) * sp
+            val target = queueTarget(i)
             if (i - qHead > visible) { qS[i] = target; continue }
             val cur = qS[i]
             qS[i] = if (cur > target) max(target, cur - speed * dt) else target
@@ -664,9 +677,9 @@ class GameEngine(
         }
         val v = best ?: return
         v.reserved++
-        walkers += Walker(c, layout.queuePoint(qS[qHead]), v)
+        walkers += Walker(c, queuePos(qHead), v)
         qHead++
-        boardCooldown = 0.065f
+        boardCooldown = if (loop) 0.03f else 0.065f
     }
 
     private fun updateWalkers(dt: Float) {
@@ -740,7 +753,7 @@ class GameEngine(
     }
 
     private fun updateTutorial() {
-        if (level.number != 1 || phase != Phase.PLAYING || qHead >= queue.size) {
+        if (level.number != 1 || level.seatScale != 1 || phase != Phase.PLAYING || qHead >= queue.size) {
             if (tutorialPoint != null) tutorialPoint = null
             if (phase == Phase.WON) tutorialText = null
             return

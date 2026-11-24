@@ -24,7 +24,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-enum class Icon { COIN, STAR, STAR_EMPTY, LOCK, HOME, MAP, COLLECTION, GARAGE, GEAR, SHUFFLE, CRANE, SORT, AD, GIFT, PLAY, TROPHY, HAND, CHECK, HEART, SAD }
+enum class Icon { COIN, STAR, STAR_EMPTY, LOCK, HOME, MAP, COLLECTION, MODES, GARAGE, GEAR, SHUFFLE, CRANE, SORT, AD, GIFT, PLAY, TROPHY, HAND, CHECK, HEART, SAD }
 
 /** Chunky, colourful icons drawn in a 100×100 design space. */
 @Composable
@@ -44,6 +44,7 @@ private fun DrawScope.draw(icon: Icon) {
         Icon.HOME -> home()
         Icon.MAP -> map()
         Icon.COLLECTION -> collection()
+        Icon.MODES -> modes()
         Icon.GARAGE -> car(Offset(50f, 56f), Color(0xFFF2453D))
         Icon.GEAR -> gear()
         Icon.SHUFFLE -> shuffle()
@@ -136,6 +137,23 @@ private fun DrawScope.map() {
     drawPath(route, Color(0xFFE53935), style = Stroke(4f, cap = StrokeCap.Round, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(7f, 6f))))
     drawCircle(Color(0xFFE53935), 10f, Offset(78f, 28f))
     drawCircle(Color.White, 4f, Offset(78f, 28f))
+}
+
+/** Four glossy tiles, one per game mode, with a play arrow on top. */
+private fun DrawScope.modes() {
+    val tiles = listOf(
+        Offset(12f, 12f) to Color(0xFFFFA000), Offset(52f, 12f) to Color(0xFF2F7CF6),
+        Offset(12f, 52f) to Color(0xFFE0409A), Offset(52f, 52f) to Color(0xFFE6A100),
+    )
+    for ((o, c) in tiles) {
+        drawRoundRect(Color(0xFF0D2C6B), o + Offset(0f, 4f), Size(36f, 36f), CornerRadius(10f))
+        drawRoundRect(c, o, Size(36f, 36f), CornerRadius(10f))
+        drawRoundRect(Color.White.copy(alpha = 0.35f), o + Offset(5f, 4f), Size(26f, 9f), CornerRadius(4f))
+    }
+    drawCircle(Color(0xFF0D2C6B), 19f, Offset(50f, 52f))
+    drawCircle(Color.White, 16f, Offset(50f, 50f))
+    val p = Path().apply { moveTo(45f, 41f); lineTo(59f, 50f); lineTo(45f, 59f); close() }
+    drawPath(p, Color(0xFF5FC12F))
 }
 
 private fun DrawScope.collection() {

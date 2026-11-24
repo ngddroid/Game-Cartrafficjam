@@ -23,6 +23,22 @@ enum class BoosterType(val title: String, val description: String, val price: In
 
 enum class Difficulty(val label: String?) { NORMAL(null), HARD("HARD LEVEL"), SUPER_HARD("SUPER HARD") }
 
+/** The four ways to play, picked on the Modes tab. Each mode keeps its own level counter. */
+enum class GameMode(val title: String, val tagline: String, val accent: Long, val accentDark: Long) {
+    CLASSIC("Classic", "Clear the lot and match every rider to a car of their color.", 0xFFFFA000, 0xFFB35A00),
+    LOOP("Crowd Loop", "A giant crowd circles the ring. Park big buses and fill them up!", 0xFF2F7CF6, 0xFF0D3C9E),
+    PIXEL("Pixel Crowd", "The picture is made of people. Send buses and peel it layer by layer.", 0xFFE0409A, 0xFF8A1257),
+    SAND("Sand Sweep", "Free the trucks so they ride the belt and scoop the sand picture.", 0xFFE6A100, 0xFF8A5A00),
+    ;
+
+    companion object {
+        fun of(name: String?) = entries.firstOrNull { it.name == name } ?: CLASSIC
+    }
+}
+
+/** How the waiting line is laid out: the station snake, or a thick crowd circling a ring road. */
+enum class QueueStyle { SNAKE, LOOP }
+
 /** Passenger and vehicle colors; [hex] is the base body color. */
 enum class JamColor(val hex: Long) {
     RED(0xFFF2453D), BLUE(0xFF2F7CF6), GREEN(0xFF3DBE4B), YELLOW(0xFFFFC21A),
@@ -66,6 +82,9 @@ data class Level(
     val colorCount: Int,
     val openSlots: Int = 4,
     val lockedSlots: Int = 3,
+    /** Seats are multiplied by this; Crowd Loop uses big buses. */
+    val seatScale: Int = 1,
+    val queueStyle: QueueStyle = QueueStyle.SNAKE,
 ) {
     fun inMask(x: Int, y: Int) = x in 0 until cols && y in 0 until rows && mask[y * cols + x]
     override fun equals(other: Any?) = this === other

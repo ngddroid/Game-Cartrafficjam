@@ -1,6 +1,7 @@
 package com.puzzel.lab.cartrafficjam.core.data
 
 import com.puzzel.lab.cartrafficjam.game.model.BoosterType
+import com.puzzel.lab.cartrafficjam.game.model.GameMode
 
 const val TOTAL_LEVELS = 5000
 const val LEVELS_PER_COLLECTION = 100
@@ -27,8 +28,12 @@ data class PlayerState(
     val onboardingDone: Boolean = false,
     val dailyStreak: Int = 0,
     val lastDailyDay: Long = -1,
+    /** Next level to play in each non-classic mode (1-based). */
+    val modeLevels: Map<GameMode, Int> = emptyMap(),
     val loaded: Boolean = false,
 ) {
+    fun modeLevel(mode: GameMode): Int = if (mode == GameMode.CLASSIC) nextLevel else (modeLevels[mode] ?: 1)
+
     fun isLevelUnlocked(level: Int) = level in 1..TOTAL_LEVELS && unlockedLevels[level]
     fun starsOf(level: Int): Int = if (level in 1..TOTAL_LEVELS) stars[level].toInt() else 0
     fun isCompleted(level: Int) = starsOf(level) > 0

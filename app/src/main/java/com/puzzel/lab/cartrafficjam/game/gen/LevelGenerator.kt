@@ -119,6 +119,33 @@ object DifficultyCurve {
         return LevelParams(target, colors.coerceAtMost(max(2, target / 2)), cols, rows, shape, rotation, weights, mystery, min(scramble, 2.8f), diff)
     }
 
+    /**
+     * Parameters for a lot of roughly [vehicles] vehicles, sized the same way as the main curve.
+     * Used by the other game modes, which want smaller or larger lots than the classic curve.
+     */
+    fun sized(
+        vehicles: Int,
+        colors: Int,
+        shape: Shape,
+        rotation: Float,
+        scramble: Float,
+        mystery: Float = 0f,
+        weights: FloatArray = floatArrayOf(0.38f, 0.34f, 0.28f),
+        difficulty: Difficulty = Difficulty.NORMAL,
+    ): LevelParams {
+        val avgArea = 2 * (3 * weights[0] + 4 * weights[1] + 5 * weights[2])
+        val cells = vehicles * avgArea / 0.86f / shape.fill
+        val aspect = if (rotation == 0f) 1.1f else 1.0f
+        val maxCols = if (rotation == 0f) 23 else 20
+        val cols = sqrt(cells / aspect).roundToInt().coerceIn(7, maxCols)
+        val rows = (cols * aspect).roundToInt().coerceIn(7, maxCols + 2)
+        val fits = (cols * rows * shape.fill * 0.86f / avgArea).toInt()
+        val target = vehicles.coerceAtMost(fits.coerceAtLeast(3))
+        return LevelParams(target, colors.coerceIn(1, 8), cols, rows, shape, rotation, weights, mystery, scramble, difficulty)
+    }
+
+    fun randomShape(rng: Random) = pickShape(rng)
+
     private fun pickShape(rng: Random): Shape {
         val r = rng.nextFloat()
         return when {
@@ -217,6 +244,23 @@ object LevelGenerator {
         error("level $n could not be generated")
     }
 
+    /**
+     * A lot built from explicit [params] rather than the classic curve. The vehicles are listed
+     * so that the reversed list is a guaranteed removal order.
+     */
+    fun custom(number: Int, seed: Long, params: (Random) -> LevelParams): Level {
+        for (attempt in 0 until 12) {
+            val rng = Random(seed + 104729L * attempt)
+            val level = build(number, rng, scrambleOverride = if (attempt >= 8) 0f else null, minFill = 0.7f, fixed = params(rng))
+            if (level != null && Solver.solvesIntended(level)) return level
+        }
+        for (k in 0 until 30) {
+            val rng = Random(seed * 31L + k)
+            build(number, rng, scrambleOverride = 0f, minFill = 0.3f, fixed = params(rng))?.let { return it }
+        }
+        error("custom level $number could not be generated")
+    }
+
     /** Level 1: three vehicles that teach tap, match and blocking. */
     private fun tutorialLevel(): Level {
         val cols = 10
@@ -232,8 +276,8 @@ object LevelGenerator {
         return Level(1, cols, rows, BooleanArray(cols * rows) { true }, vehicles, queue, 0f, Difficulty.NORMAL, 3)
     }
 
-    private fun build(n: Int, rng: Random, scrambleOverride: Float?, minFill: Float): Level? {
-        val p = DifficultyCurve.params(n, rng)
+    private fun build(n: Int, rng: Random, scrambleOverride: Float?, minFill: Float, fixed: LevelParams? = null): Level? {
+        val p = fixed ?: DifficultyCurve.params(n, rng)
         val cols = p.cols
         val rows = p.rows
         val mask = BooleanArray(cols * rows) { i ->

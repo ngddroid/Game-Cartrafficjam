@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.puzzel.lab.cartrafficjam.App
 import com.puzzel.lab.cartrafficjam.core.audio.Music
 import com.puzzel.lab.cartrafficjam.core.audio.Sfx
-import com.puzzel.lab.cartrafficjam.game.render.Themes
+import com.puzzel.lab.cartrafficjam.game.model.GameMode
 import com.puzzel.lab.cartrafficjam.ui.components.ConfirmDialog
 import com.puzzel.lab.cartrafficjam.ui.components.GameIcon
 import com.puzzel.lab.cartrafficjam.ui.components.Icon
@@ -58,26 +58,21 @@ import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 
 enum class Tab(val label: String, val icon: Icon) {
     LEVELS("Levels", Icon.MAP),
-    COLLECTIONS("Worlds", Icon.COLLECTION),
+    MODES("Modes", Icon.MODES),
     HOME("Home", Icon.HOME),
     GARAGE("Garage", Icon.GARAGE),
     SETTINGS("Settings", Icon.GEAR),
 }
 
-private sealed interface LockRequest {
-    data class Level(val n: Int) : LockRequest
-    data class Collection(val c: Int) : LockRequest
-}
-
 @Composable
-fun MainScreen(onPlay: (Int) -> Unit, onOpenDoc: (String) -> Unit) {
+fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpenDoc: (String) -> Unit) {
     val container = App.container
     val audio = LocalAudio.current
     val progress = container.progress
     val player by progress.state.collectAsState()
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var scrollToCollection by remember { mutableIntStateOf(0) }
-    var lock by remember { mutableStateOf<LockRequest?>(null) }
+    var lockedLevel by remember { mutableStateOf<Int?>(null) }
     var confirmExit by remember { mutableStateOf(false) }
     val activity = LocalContext.current as? Activity
 
@@ -107,18 +102,13 @@ fun MainScreen(onPlay: (Int) -> Unit, onOpenDoc: (String) -> Unit) {
                         scrollToCollection = scrollToCollection,
                         onScrolled = { scrollToCollection = 0 },
                         onLevel = { n ->
-                            if (player.isLevelUnlocked(n)) onPlay(n) else lock = LockRequest.Level(n)
+                            if (player.isLevelUnlocked(n)) onPlay(n) else lockedLevel = n
                         },
                     )
-                    Tab.COLLECTIONS -> CollectionsTab(
+                    Tab.MODES -> ModesTab(
                         player = player,
-                        onOpen = { c ->
-                            if (player.isCollectionUnlocked(c)) {
-                                scrollToCollection = c
-                                tab = Tab.LEVELS
-                            } else {
-                                lock = LockRequest.Collection(c)
-                            }
+                        onPlay = { m ->
+                            if (m == GameMode.CLASSIC) onPlay(player.nextLevel) else onPlayMode(m, player.modeLevel(m))
                         },
                     )
                     Tab.GARAGE -> GarageTab(player)
@@ -132,30 +122,18 @@ fun MainScreen(onPlay: (Int) -> Unit, onOpenDoc: (String) -> Unit) {
         }
     }
 
-    val req = lock
     WatchAdDialog(
-        visible = req != null,
-        title = if (req is LockRequest.Collection) "Locked World" else "Locked Level",
-        message = when (req) {
-            is LockRequest.Level -> "Level ${req.n} is locked.\nWatch a short ad to unlock it now!"
-            is LockRequest.Collection -> "${Themes.collectionName(req.c)} is locked.\nWatch a short ad to open this world!"
-            null -> ""
-        },
+        visible = lockedLevel != null,
+        title = "Locked Level",
+        message = "Level ${lockedLevel ?: 0} is locked.\nWatch a short ad to unlock it now!",
         onWatch = {
-            val r = lock
+            val n = lockedLevel
             container.ads.showRewarded("unlock", onReward = {
-                when (r) {
-                    is LockRequest.Level -> progress.unlockLevel(r.n)
-                    is LockRequest.Collection -> {
-                        progress.unlockCollection(r.c)
-                        scrollToCollection = r.c
-                    }
-                    null -> Unit
-                }
-                lock = null
+                if (n != null) progress.unlockLevel(n)
+                lockedLevel = null
             })
         },
-        onDismiss = { lock = null },
+        onDismiss = { lockedLevel = null },
     )
 
     ConfirmDialog(

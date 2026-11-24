@@ -35,7 +35,7 @@ object GameRenderer {
         val u = lay.u
         translate(e.screenShake.x, e.screenShake.y) {
             drawImage(scene)
-            SceneAmbient.draw(this, lay, e.theme, timeSec)
+            if (!lay.loop) SceneAmbient.draw(this, lay, e.theme, timeSec)
 
             // Locked slots and VIP highlight
             for (i in 0 until SLOT_COUNT) if (!e.slots[i].open) lockedSlot(e, i, timeSec)
@@ -45,7 +45,7 @@ object GameRenderer {
                 drawRoundRect(Color(0xFFFFD54F).copy(alpha = a), r.topLeft, r.size, CornerRadius(6 * u), style = Stroke(4 * u))
             }
 
-            drawQueue(e, timeSec)
+            if (lay.loop) drawCrowd(e, timeSec) else drawQueue(e, timeSec)
 
             // Shadows first so no vehicle's shadow falls on another's roof.
             for (v in e.vehicles) if (v.state != VState.GONE) vehicle(e, v, Layer.SHADOW)
@@ -58,6 +58,7 @@ object GameRenderer {
             }
 
             for (v in e.vehicles) if (v.inSlot) vehicle(e, v, Layer.BODY)
+            if (e.level.seatScale > 1) for (v in e.vehicles) if (v.inSlot && v.state == VState.PARKED) seatsLeftBadge(e, v)
             val moving = e.vehicles.filter { it.state == VState.EXITING || (it.state == VState.DEPARTING && it.departPhase == 1) }
             for (v in moving.sortedBy { it.pos.y }) vehicle(e, v, Layer.BODY)
             for (v in e.vehicles) if (v.state == VState.CRANE) {
@@ -136,15 +137,18 @@ object GameRenderer {
     /** Little passenger heads poking out of the roof of a parked vehicle. */
     private fun DrawScope.seats(e: GameEngine, v: Vehicle) {
         val roof = e.art.roofRect(v.type)
-        val rowsN = v.seats / 2
+        // Big Crowd Loop buses show one head per [seatScale] riders.
+        val heads = v.type.seats
+        val shown = v.filled * heads / v.seats
+        val rowsN = heads / 2
         val step = roof.height * 0.9f / rowsN
         val r = min(roof.width * 0.24f, step * 0.44f)
         val col = jamColor(v.color)
         val startY = roof.top + roof.height * 0.05f + step / 2
-        for (i in 0 until v.seats) {
+        for (i in 0 until heads) {
             val cx = if (i % 2 == 0) -roof.width * 0.24f else roof.width * 0.24f
             val c = Offset(cx, startY + (i / 2) * step)
-            if (i < v.filled) {
+            if (i < shown) {
                 drawCircle(col.shade(0.55f), r + 1f, c + Offset(0f, 1f))
                 drawCircle(
                     androidx.compose.ui.graphics.Brush.radialGradient(listOf(col.tint(0.5f), col, col.shade(0.8f)), c - Offset(r * 0.4f, r * 0.4f), r * 1.5f),
@@ -154,6 +158,50 @@ object GameRenderer {
             } else {
                 drawCircle(Color.Black.copy(alpha = 0.22f), r * 0.75f, c)
             }
+        }
+    }
+
+    /** Seats still free, on a tag at the foot of the stall. */
+    private fun DrawScope.seatsLeftBadge(e: GameEngine, v: Vehicle) {
+        val u = e.layout.u
+        val r = e.layout.slotRect(v.slot)
+        val left = v.seats - v.filled
+        val c = Offset(r.center.x, r.bottom + 3 * u)
+        val w = 26 * u
+        val h = 13 * u
+        val col = jamColor(v.color)
+        drawRoundRect(col.shade(0.5f), Offset(c.x - w / 2, c.y - h / 2 + 1.5f * u), Size(w, h), CornerRadius(5 * u))
+        drawRoundRect(col.shade(0.85f), Offset(c.x - w / 2, c.y - h / 2), Size(w, h), CornerRadius(5 * u))
+        textPaint.color = android.graphics.Color.WHITE
+        textPaint.textSize = 10 * u
+        drawContext.canvas.nativeCanvas.drawText("$left", c.x, c.y + 3.6f * u, textPaint)
+    }
+
+    private val crowdOrder = ArrayList<Int>()
+
+    /** Crowd Loop: hundreds of riders packed four abreast, drawn back to front. */
+    private fun DrawScope.drawCrowd(e: GameEngine, time: Float) {
+        val lay = e.layout
+        val pw = e.passengerArt.w
+        val ph = e.passengerArt.h
+        val maxS = lay.queueVisibleLength + 30 * lay.u
+        crowdOrder.clear()
+        var i = e.qHead
+        while (i < e.queue.size) {
+            if (e.qS[i] <= maxS) crowdOrder += i
+            else if (e.queueTarget(i) > maxS) break
+            i++
+        }
+        val ys = HashMap<Int, Float>(crowdOrder.size * 2)
+        for (k in crowdOrder) ys[k] = e.queuePos(k).y
+        crowdOrder.sortBy { ys[it] }
+        for (k in crowdOrder) {
+            val p = e.queuePos(k)
+            val walking = e.qS[k] - e.queueTarget(k) > 1f
+            val bob = if (walking) 0f else sin(time * 3.4f + k * 0.9f) * 0.5f * lay.u
+            drawOval(Color.Black.copy(alpha = 0.2f), Offset(p.x - pw * 0.4f, p.y - ph * 0.08f), Size(pw * 0.8f, ph * 0.16f))
+            val frame = if (walking) ((time * 9f).toInt() + k) % 4 else 4
+            drawImage(e.passengerArt.get(e.queue[k], frame), Offset(p.x - pw / 2, p.y - ph - bob))
         }
     }
 

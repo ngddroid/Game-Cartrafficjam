@@ -23,7 +23,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.puzzel.lab.cartrafficjam.ui.components.AdOverlay
 import com.puzzel.lab.cartrafficjam.ui.components.LocalAudio
+import com.puzzel.lab.cartrafficjam.game.model.GameMode
 import com.puzzel.lab.cartrafficjam.ui.game.GameScreen
+import com.puzzel.lab.cartrafficjam.ui.game.ModeGameScreen
 import com.puzzel.lab.cartrafficjam.ui.main.MainScreen
 import com.puzzel.lab.cartrafficjam.ui.onboarding.OnboardingScreen
 import com.puzzel.lab.cartrafficjam.ui.splash.SplashScreen
@@ -41,7 +43,10 @@ class MainActivity : ComponentActivity() {
             CarTrafficJamTheme {
                 CompositionLocalProvider(LocalAudio provides container.audio) {
                     Box(Modifier.fillMaxSize()) {
-                        AppNavHost(debugLevel = if (BuildConfig.DEBUG) intent.getIntExtra("debug_level", 0) else 0)
+                        AppNavHost(
+                            debugLevel = if (BuildConfig.DEBUG) intent.getIntExtra("debug_level", 0) else 0,
+                            debugMode = if (BuildConfig.DEBUG) intent.getStringExtra("debug_mode") else null,
+                        )
                         AdOverlay(container.ads)
                     }
                 }
@@ -65,14 +70,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @androidx.compose.runtime.Composable
-private fun AppNavHost(debugLevel: Int) {
+private fun AppNavHost(debugLevel: Int, debugMode: String? = null) {
     val nav = rememberNavController()
     // Debug builds can jump straight into a level: adb shell am start ... --ei debug_level N
     androidx.compose.runtime.LaunchedEffect(debugLevel) {
         if (debugLevel > 0) {
             kotlinx.coroutines.delay(300)
             nav.navigate("main") { popUpTo("splash") { inclusive = true } }
-            nav.navigate("game/$debugLevel")
+            if (debugMode != null) nav.navigate("mode/$debugMode/$debugLevel") else nav.navigate("game/$debugLevel")
         }
     }
     NavHost(
@@ -96,6 +101,7 @@ private fun AppNavHost(debugLevel: Int) {
         composable("main") {
             MainScreen(
                 onPlay = { level -> nav.navigate("game/$level") { launchSingleTop = true } },
+                onPlayMode = { mode, level -> nav.navigate("mode/${mode.name}/$level") { launchSingleTop = true } },
                 onOpenDoc = { doc -> nav.navigate("web/$doc") },
             )
         }
@@ -108,6 +114,20 @@ private fun AppNavHost(debugLevel: Int) {
                     nav.navigate("game/$next") { popUpTo("main") }
                 },
             )
+        }
+        composable(
+            "mode/{mode}/{level}",
+            arguments = listOf(navArgument("mode") { type = NavType.StringType }, navArgument("level") { type = NavType.IntType }),
+        ) { entry ->
+            val mode = GameMode.of(entry.arguments?.getString("mode"))
+            val level = entry.arguments?.getInt("level") ?: 1
+            val onHome = { nav.popBackStack("main", inclusive = false); Unit }
+            val onNext = { next: Int -> nav.navigate("mode/${mode.name}/$next") { popUpTo("main") } }
+            if (mode == GameMode.LOOP) {
+                GameScreen(levelNumber = level, mode = mode, onHome = onHome, onPlayLevel = onNext)
+            } else {
+                ModeGameScreen(mode = mode, levelNumber = level, onHome = onHome, onPlayLevel = onNext)
+            }
         }
         composable("web/{doc}") { entry ->
             WebScreen(entry.arguments?.getString("doc") ?: "privacy") { nav.popBackStack() }

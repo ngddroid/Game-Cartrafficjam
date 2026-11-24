@@ -83,6 +83,8 @@ import com.puzzel.lab.cartrafficjam.game.engine.GameFx
 import com.puzzel.lab.cartrafficjam.game.gen.LevelGenerator
 import com.puzzel.lab.cartrafficjam.game.model.BoosterType
 import com.puzzel.lab.cartrafficjam.game.model.Difficulty
+import com.puzzel.lab.cartrafficjam.game.model.GameMode
+import com.puzzel.lab.cartrafficjam.game.modes.LoopLevels
 import com.puzzel.lab.cartrafficjam.game.render.GameRenderer.drawGame
 import com.puzzel.lab.cartrafficjam.game.render.Skin
 import com.puzzel.lab.cartrafficjam.game.render.Themes
@@ -108,16 +110,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private const val REVIVE_PRICE = 120
+internal const val REVIVE_PRICE = 120
 
-private fun rewardFor(level: Int) = when (LevelGenerator.get(level).difficulty) {
+internal fun rewardFor(difficulty: Difficulty) = when (difficulty) {
     Difficulty.NORMAL -> 10
     Difficulty.HARD -> 20
     Difficulty.SUPER_HARD -> 30
 }
 
+/** Plays a lot-and-queue level: classic levels, or Crowd Loop levels when [mode] is LOOP. */
 @Composable
-fun GameScreen(levelNumber: Int, onHome: () -> Unit, onPlayLevel: (Int) -> Unit) {
+fun GameScreen(levelNumber: Int, onHome: () -> Unit, onPlayLevel: (Int) -> Unit, mode: GameMode = GameMode.CLASSIC) {
     val container = App.container
     val audio = LocalAudio.current
     val progress = container.progress
@@ -129,10 +132,11 @@ fun GameScreen(levelNumber: Int, onHome: () -> Unit, onPlayLevel: (Int) -> Unit)
     key(levelNumber, attempt) {
         GameSession(
             levelNumber = levelNumber,
+            mode = mode,
             skin = Skin.of(player.skin),
             onHome = onHome,
             onRetry = { attempt++ },
-            onNext = { onPlayLevel((levelNumber + 1).coerceAtMost(TOTAL_LEVELS)) },
+            onNext = { onPlayLevel(if (mode == GameMode.CLASSIC) (levelNumber + 1).coerceAtMost(TOTAL_LEVELS) else levelNumber + 1) },
         )
     }
 }
@@ -142,6 +146,7 @@ private enum class Overlay { NONE, PAUSE, PROP, REVIVE, FAIL, WIN, SLOT }
 @Composable
 private fun GameSession(
     levelNumber: Int,
+    mode: GameMode,
     skin: Skin,
     onHome: () -> Unit,
     onRetry: () -> Unit,
@@ -169,9 +174,9 @@ private fun GameSession(
         scope.launch { delay(1800); if (toastId == id) toast = null }
     }
 
-    val level = remember(levelNumber) { LevelGenerator.get(levelNumber) }
+    val level = remember(levelNumber) { if (mode == GameMode.LOOP) LoopLevels.get(levelNumber) else LevelGenerator.get(levelNumber) }
     val theme = remember(levelNumber) { Themes.forLevel(levelNumber) }
-    val reward = remember(levelNumber) { rewardFor(levelNumber) }
+    val reward = remember(levelNumber) { rewardFor(level.difficulty) }
 
     val engine = remember(levelNumber) {
         GameEngine(
@@ -191,8 +196,12 @@ private fun GameSession(
             when (e) {
                 is GameEvent.Won -> {
                     stars = e.stars
-                    val opened = progress.completeLevel(levelNumber, e.stars, reward)
-                    if (opened) newWorld = Themes.collectionName(collectionOf(levelNumber + 1))
+                    if (mode == GameMode.CLASSIC) {
+                        val opened = progress.completeLevel(levelNumber, e.stars, reward)
+                        if (opened) newWorld = Themes.collectionName(collectionOf(levelNumber + 1))
+                    } else {
+                        progress.completeModeLevel(mode, levelNumber, reward)
+                    }
                     audio.play(Sfx.Win)
                     audio.haptic(Haptic.Success)
                     delay(900)
@@ -244,7 +253,10 @@ private fun GameSession(
         }
 
         if (engine.ready) {
-            Hud(engine, levelNumber, level.difficulty, player.coins, onPause = { overlay = Overlay.PAUSE })
+            Hud(
+                if (mode == GameMode.CLASSIC) "Level $levelNumber" else "${mode.title} $levelNumber",
+                level.difficulty, player.coins, onPause = { overlay = Overlay.PAUSE },
+            )
             QueueSign(engine)
             TutorialLayer(engine)
             BoosterBar(
@@ -344,7 +356,7 @@ private fun GameSession(
             onRetry = { overlay = Overlay.NONE; onRetry() },
             onSkip = {
                 ads.showRewarded("skip_level", onReward = {
-                    progress.completeLevel(levelNumber, 1, 0)
+                    if (mode == GameMode.CLASSIC) progress.completeLevel(levelNumber, 1, 0) else progress.completeModeLevel(mode, levelNumber, 0)
                     overlay = Overlay.NONE
                     onNext()
                 })
@@ -392,7 +404,7 @@ private fun useBooster(engine: GameEngine, type: BoosterType): Boolean = when (t
 // --- HUD --------------------------------------------------------------------------------------
 
 @Composable
-private fun Hud(engine: GameEngine, level: Int, difficulty: Difficulty, coins: Int, onPause: () -> Unit) {
+internal fun Hud(title: String, difficulty: Difficulty, coins: Int, onPause: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -408,7 +420,7 @@ private fun Hud(engine: GameEngine, level: Int, difficulty: Difficulty, coins: I
                     .background(Color(0x66000000), RoundedCornerShape(18.dp))
                     .padding(horizontal = 22.dp, vertical = 5.dp),
             ) {
-                OutlinedText("Level $level", style = GameText.Title, fontSize = 22.sp, strokeWidth = 6f)
+                OutlinedText(title, style = GameText.Title, fontSize = 22.sp, strokeWidth = 6f)
             }
             if (difficulty != Difficulty.NORMAL) {
                 Text(
@@ -562,7 +574,7 @@ private fun BoosterButton(label: String, icon: Icon, count: Int, onClick: () -> 
 }
 
 @Composable
-private fun DifficultyBanner(difficulty: Difficulty) {
+internal fun DifficultyBanner(difficulty: Difficulty) {
     var show by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(1900)
@@ -599,7 +611,7 @@ private fun DifficultyBanner(difficulty: Difficulty) {
 // --- Dialogs ----------------------------------------------------------------------------------
 
 @Composable
-private fun PauseDialog(
+internal fun PauseDialog(
     visible: Boolean,
     sound: Boolean,
     music: Boolean,
@@ -680,15 +692,27 @@ private fun PropDialog(
 }
 
 @Composable
-private fun ReviveDialog(visible: Boolean, coins: Int, onBuy: () -> Unit, onAd: () -> Unit, onGiveUp: () -> Unit) {
+private fun ReviveDialog(visible: Boolean, coins: Int, onBuy: () -> Unit, onAd: () -> Unit, onGiveUp: () -> Unit) =
+    ReviveDialog(visible, coins, "Out of Space!", "Every parking spot is taken.\nKeep going with an extra spot!", onBuy, onAd, onGiveUp)
+
+@Composable
+internal fun ReviveDialog(
+    visible: Boolean,
+    coins: Int,
+    title: String,
+    message: String,
+    onBuy: () -> Unit,
+    onAd: () -> Unit,
+    onGiveUp: () -> Unit,
+) {
     GameDialog(visible, onGiveUp) {
-        GamePanel("Out of Space!", frame = Color(0xFFF2453D), onClose = onGiveUp) {
+        GamePanel(title, frame = Color(0xFFF2453D), onClose = onGiveUp) {
             val beat = rememberInfiniteTransition(label = "beat")
             val s by beat.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(420, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "s")
             GameIcon(Icon.HEART, 120.dp, Modifier.scale(s))
             Spacer(Modifier.height(8.dp))
             Text(
-                "Every parking spot is taken.\nKeep going with an extra spot!",
+                message,
                 style = GameText.Body.copy(fontSize = 17.sp, textAlign = TextAlign.Center, color = Color(0xFF8A4B14)),
             )
             Spacer(Modifier.height(20.dp))
@@ -704,7 +728,7 @@ private fun ReviveDialog(visible: Boolean, coins: Int, onBuy: () -> Unit, onAd: 
 }
 
 @Composable
-private fun FailDialog(visible: Boolean, onRetry: () -> Unit, onSkip: () -> Unit, onHome: () -> Unit) {
+internal fun FailDialog(visible: Boolean, onRetry: () -> Unit, onSkip: () -> Unit, onHome: () -> Unit) {
     GameDialog(visible, onHome) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             RibbonBanner("Level Failed", Color(0xFF7A8BA8), Modifier.fillMaxWidth(0.9f))
@@ -726,7 +750,7 @@ private fun FailDialog(visible: Boolean, onRetry: () -> Unit, onSkip: () -> Unit
 }
 
 @Composable
-private fun WinDialog(
+internal fun WinDialog(
     visible: Boolean,
     levelNumber: Int,
     stars: Int,

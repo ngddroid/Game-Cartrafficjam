@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
+import com.puzzel.lab.cartrafficjam.game.engine.CROWD_LANES
 import com.puzzel.lab.cartrafficjam.game.engine.GameLayout
 import com.puzzel.lab.cartrafficjam.game.engine.SLOT_COUNT
 import com.puzzel.lab.cartrafficjam.game.engine.VIP_SLOT
@@ -76,16 +77,20 @@ object SceneArt {
         // Grass under everything
         textured(grassTile(th.outside, px), Offset.Zero, size)
 
-        // Sky + backdrop
-        val floorTop = lay.topInset + 120 * u
-        sky(th, w, floorTop, lay.topInset)
-        backdrop(th, w, lay.topInset, floorTop, u)
+        if (lay.loop) {
+            ringPark(lay, th, u, px)
+        } else {
+            // Sky + backdrop
+            val floorTop = lay.topInset + 120 * u
+            sky(th, w, floorTop, lay.topInset)
+            backdrop(th, w, lay.topInset, floorTop, u)
 
-        // Platform floor
-        floor(th, Offset(0f, floorTop), Size(w, lay.slotsTop - floorTop), u, px)
-        drawRect(Brush.verticalGradient(listOf(Color(0x33000000), Color.Transparent), floorTop, floorTop + 10 * u), Offset(0f, floorTop), Size(w, 10 * u))
-        floorProps(th, lay, u)
-        queueBarrier(lay, th, u)
+            // Platform floor
+            floor(th, Offset(0f, floorTop), Size(w, lay.slotsTop - floorTop), u, px)
+            drawRect(Brush.verticalGradient(listOf(Color(0x33000000), Color.Transparent), floorTop, floorTop + 10 * u), Offset(0f, floorTop), Size(w, 10 * u))
+            floorProps(th, lay, u)
+            queueBarrier(lay, th, u)
+        }
 
         // Platform edge: tactile strip + curb
         drawRect(Color(0xFFFFD54F), Offset(0f, lay.slotsTop - 9 * u), Size(w, 4 * u))
@@ -119,6 +124,70 @@ object SceneArt {
             val x = k * 22 * u + 6 * u
             bush(Offset(x, barTop + 6 * u), 13 * u, th.outside.shade(0.85f))
         }
+    }
+
+    /** Crowd Loop: a park seen from above with the ring road the crowd shuffles around. */
+    private fun DrawScope.ringPark(lay: GameLayout, th: SceneTheme, u: Float, px: Int) {
+        val crowd = lay.crowd ?: return
+        val w = size.width
+        val top = lay.topInset
+        // Sunny park lawn with a soft mowing pattern.
+        val lawn = Color(0xFF8BCB5A)
+        drawRect(lawn, Offset(0f, 0f), Size(w, lay.slotsTop))
+        var k = 0
+        var y = top + 40 * u
+        while (y < lay.slotsTop) {
+            if (k % 2 == 0) drawRect(Color.White.copy(alpha = 0.06f), Offset(0f, y), Size(w, 22 * u))
+            y += 22 * u; k++
+        }
+        textured(grassTile(lawn, px), Offset(0f, top + 40 * u), Size(w, lay.slotsTop - top - 40 * u))
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF5FA8E8), Color(0xFF8BCB5A)), 0f, top + 48 * u), size = Size(w, top + 48 * u))
+
+        // Inner field: a lighter lawn inside the ring with a flower bed and trees.
+        val c = lay.ringCenter
+        drawOval(Color(0xFFA4DB6E), Offset(c.x - lay.ringRx + 18 * u, c.y - lay.ringRy + 18 * u), Size((lay.ringRx - 18 * u) * 2, (lay.ringRy - 18 * u) * 2))
+        drawOval(Color.White.copy(alpha = 0.18f), Offset(c.x - lay.ringRx + 18 * u, c.y - lay.ringRy + 18 * u), Size((lay.ringRx - 18 * u) * 2, (lay.ringRy - 18 * u) * 2), style = Stroke(2 * u))
+        val bed = Offset(c.x, c.y + 40 * u)
+        drawOval(Color(0xFF6D4C41), Offset(bed.x - 30 * u, bed.y - 9 * u), Size(60 * u, 18 * u))
+        drawOval(Color(0xFF8D6E63), Offset(bed.x - 27 * u, bed.y - 8 * u), Size(54 * u, 14 * u))
+        val rnd = Random(7)
+        repeat(22) {
+            val fx = bed.x + (rnd.nextFloat() - 0.5f) * 48 * u
+            val fy = bed.y + (rnd.nextFloat() - 0.5f) * 10 * u
+            val fc = listOf(Color(0xFFFF5A7A), Color(0xFFFFEB3B), Color.White, Color(0xFFBA68C8))[it % 4]
+            drawCircle(fc, 2.2f * u, Offset(fx, fy))
+        }
+        tree(Offset(c.x - 78 * u, c.y + 8 * u), u, Color(0xFF43A047))
+        tree(Offset(c.x + 80 * u, c.y + 12 * u), u, Color(0xFF2E7D32))
+        bush(Offset(c.x - 56 * u, c.y + 40 * u), 10 * u, Color(0xFF558B2F))
+        bush(Offset(c.x + 58 * u, c.y + 42 * u), 11 * u, Color(0xFF689F38))
+
+        // The road the crowd stands on.
+        val road = Path().apply {
+            val pts = crowd.samples(6)
+            moveTo(pts[0].x, pts[0].y + 30 * u)
+            for (p in pts) lineTo(p.x, p.y)
+        }
+        val width = CROWD_LANES * lay.laneGap + 12 * u
+        drawPath(road, Color.Black.copy(alpha = 0.16f), style = Stroke(width + 8 * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(road, Color(0xFFE6E9EC), style = Stroke(width + 6 * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(road, Color(0xFFB7BEC6), style = Stroke(width + 1.5f * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(
+            road, ShaderBrush(ImageShader(noiseTile(Color(0xFF7D838D), px, 29, 520, 0.2f), TileMode.Repeated, TileMode.Repeated)),
+            style = Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+        drawPath(
+            road, Color.White.copy(alpha = 0.45f),
+            style = Stroke(1.6f * u, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(9 * u, 9 * u))),
+        )
+
+        // Trees and benches around the outside.
+        tree(Offset(22 * u, top + 92 * u), u, Color(0xFF388E3C))
+        tree(Offset(w - 20 * u, top + 104 * u), u, Color(0xFF43A047))
+        bush(Offset(16 * u, top + 236 * u), 11 * u, Color(0xFF558B2F))
+        bush(Offset(w - 16 * u, top + 236 * u), 12 * u, Color(0xFF558B2F))
+        bush(Offset(160 * u, top + 294 * u), 10 * u, Color(0xFF689F38))
+        bush(Offset(210 * u, top + 290 * u), 12 * u, Color(0xFF7CB342))
     }
 
     private fun DrawScope.sky(th: SceneTheme, w: Float, bottom: Float, top: Float) {

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.puzzel.lab.cartrafficjam.game.model.BoosterType
+import com.puzzel.lab.cartrafficjam.game.model.GameMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,7 @@ class ProgressRepository(private val context: Context, private val scope: Corout
         val streak = intPreferencesKey("streak")
         val lastDaily = longPreferencesKey("last_daily")
         fun booster(t: BoosterType) = intPreferencesKey("booster_${t.name}")
+        fun mode(m: GameMode) = intPreferencesKey("mode_level_${m.name}")
     }
 
     suspend fun load() {
@@ -69,6 +71,7 @@ class ProgressRepository(private val context: Context, private val scope: Corout
             onboardingDone = p[K.onboarding] ?: false,
             dailyStreak = p[K.streak] ?: 0,
             lastDailyDay = p[K.lastDaily] ?: -1,
+            modeLevels = GameMode.entries.filter { it != GameMode.CLASSIC }.associateWith { p[K.mode(it)] ?: 1 },
             loaded = true,
         ).also {
             // Level 1 and collection 1 are always open.
@@ -105,6 +108,7 @@ class ProgressRepository(private val context: Context, private val scope: Corout
         p[K.onboarding] = s.onboardingDone
         p[K.streak] = s.dailyStreak
         p[K.lastDaily] = s.lastDailyDay
+        GameMode.entries.filter { it != GameMode.CLASSIC }.forEach { p[K.mode(it)] = s.modeLevel(it) }
     }
 
     // --- Progress ---------------------------------------------------------------------------
@@ -127,6 +131,12 @@ class ProgressRepository(private val context: Context, private val scope: Corout
             s.copy(stars = st, unlockedLevels = lv, unlockedCollections = col, coins = s.coins + coins)
         }
         return openedCollection
+    }
+
+    /** Records a win in Crowd Loop, Pixel Crowd or Sand Sweep and moves that mode on one level. */
+    fun completeModeLevel(mode: GameMode, level: Int, coins: Int) = mutate { s ->
+        val next = maxOf(s.modeLevel(mode), level + 1)
+        s.copy(modeLevels = s.modeLevels + (mode to next), coins = s.coins + coins)
     }
 
     /** Ad reward: opens one level and the collection it lives in. */

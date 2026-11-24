@@ -3,6 +3,7 @@ package com.puzzel.lab.cartrafficjam.game.engine
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import com.puzzel.lab.cartrafficjam.game.model.Level
+import com.puzzel.lab.cartrafficjam.game.model.QueueStyle
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
@@ -10,6 +11,9 @@ import kotlin.math.sin
 
 const val SLOT_COUNT = 7
 const val VIP_SLOT = SLOT_COUNT
+
+/** Crowd Loop packs the line this many people abreast. */
+const val CROWD_LANES = 4
 
 /**
  * Pixel geometry of the game screen, derived from the canvas size. Everything scales with [u],
@@ -24,15 +28,46 @@ class GameLayout(
 ) {
     val u = width / 360f
 
+    /** Crowd Loop: the line is a thick crowd on a ring road instead of the station snake. */
+    val loop = level.queueStyle == QueueStyle.LOOP
+
     // Scene (station + queue)
-    val sceneBottom = topInset + 168 * u
+    val sceneBottom = topInset + (if (loop) 312 else 168) * u
     val queueY = sceneBottom - 16 * u
     val queueColumnTop = topInset + 70 * u
     val queueStartX = 22 * u
     val queueEndX = width - 20 * u
-    val passengerSpacing = 15.5f * u
-    val passengerW = 15 * u
-    val passengerH = 27 * u
+    val passengerSpacing = (if (loop) 8.4f else 15.5f) * u
+    val passengerW = (if (loop) 12f else 15f) * u
+    val passengerH = (if (loop) 21.5f else 27f) * u
+
+    // Crowd Loop ring
+    val laneGap = 7.4f * u
+    val ringCenter = Offset(180 * u, topInset + 180 * u)
+    val ringRx = 126 * u
+    val ringRy = 78 * u
+    val crowd: CrowdPath? = if (!loop) null else {
+        val pts = ArrayList<Offset>()
+        // Front of the line: the throat that leads down to the parking stalls.
+        pts += Offset(112 * u, sceneBottom - 8 * u)
+        pts += Offset(104 * u, topInset + 268 * u)
+        // Around the ring: left side, over the top, down the right.
+        var a = 128.0
+        while (a <= 412.0) {
+            val r = Math.toRadians(a)
+            pts += Offset(ringCenter.x + ringRx * cos(r).toFloat(), ringCenter.y + ringRy * sin(r).toFloat())
+            a += 6.0
+        }
+        // The tail leaves the ring and runs off the right edge.
+        pts += Offset(300 * u, topInset + 276 * u)
+        pts += Offset(width + 20 * u, topInset + 284 * u)
+        pts += Offset(width + 400 * u, topInset + 286 * u)
+        CrowdPath(pts, 0.75f * u)
+    }
+
+    /** Where crowd member [lane] of the row [s] pixels from the front stands. */
+    fun crowdPoint(s: Float, lane: Int): Offset =
+        crowd!!.point(s, (lane - (CROWD_LANES - 1) / 2f) * laneGap)
 
     // Parking slots
     val slotsTop = sceneBottom
@@ -99,6 +134,7 @@ class GameLayout(
 
     /** Point along the queue snake, [s] pixels from the front. */
     fun queuePoint(s: Float): Offset {
+        crowd?.let { return it.point(s) }
         val row = queueEndX - queueStartX
         return if (s <= row) {
             Offset(queueStartX + s, queueY)
@@ -107,8 +143,8 @@ class GameLayout(
         }
     }
 
-    val queueVisibleLength = (queueEndX - queueStartX) + (queueY - queueColumnTop)
+    val queueVisibleLength = crowd?.let { it.length - 360 * u } ?: ((queueEndX - queueStartX) + (queueY - queueColumnTop))
 
     // HUD anchors (pixels)
-    val queueSign = Offset(70 * u, topInset + 88 * u)
+    val queueSign = if (loop) Offset(ringCenter.x, ringCenter.y - 4 * u) else Offset(70 * u, topInset + 88 * u)
 }
