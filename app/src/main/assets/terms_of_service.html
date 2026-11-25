@@ -319,6 +319,63 @@
   .contact-box div { min-width: 0; }
   .contact-box small { display: block; color: var(--muted); font-size: 13px; }
 
+  /* ---------- Studio & developer ---------- */
+  .studio-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 3px solid var(--navy);
+    border-radius: 16px;
+    box-shadow: 0 4px 0 var(--navy);
+  }
+  .studio-card img { width: 104px; height: auto; flex: 0 0 auto; }
+  .studio-card small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .studio-card strong { display: block; font-size: 22px; color: var(--navy); letter-spacing: .02em; }
+  .dev-info { margin-top: 14px; }
+  .dev-info .dev-label {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .dev-info p { margin: 0 0 2px; }
+  .dev-info .company { font-weight: 800; color: var(--navy); }
+  .dev-row { display: flex; gap: 8px; align-items: baseline; margin-top: 6px; }
+  .dev-row b { flex: 0 0 auto; color: var(--navy); }
+  .dev-row a { font-weight: 700; color: var(--blue); text-decoration: none; word-break: break-all; }
+
+  /* ---------- Provided by ---------- */
+  .provided {
+    display: inline-block;
+    margin: 18px auto 0;
+    padding: 10px 22px 8px;
+    background: rgba(255, 255, 255, .92);
+    border: 3px solid var(--navy);
+    border-radius: 18px;
+    box-shadow: 0 4px 0 var(--navy);
+  }
+  .provided span {
+    display: block;
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+  }
+  .provided img { display: block; width: 150px; height: auto; margin: 4px auto 0; }
+
   /* ---------- Footer ---------- */
   footer {
     margin-top: 10px;
@@ -436,7 +493,7 @@
 
     <section class="card" id="accept">
     <h2><span class="num">1</span>Acceptance of Terms</h2>
-    <p>These Terms of Service ("Terms") are an agreement between you and <strong>Your Studio</strong> ("we", "us") for the Traffic Jam Rush game (the "Game").</p><p>By downloading, installing or playing the Game, you agree to these Terms and to our Privacy Policy. If you don't agree, please don't use the Game.</p>
+    <p>These Terms of Service ("Terms") are an agreement between you and <strong>NG Studio</strong> ("we", "us") for the Traffic Jam Rush game (the "Game").</p><p>By downloading, installing or playing the Game, you agree to these Terms and to our Privacy Policy. If you don't agree, please don't use the Game.</p>
   </section>
 
   <section class="card" id="license">
@@ -461,7 +518,7 @@
 
   <section class="card" id="ip">
     <h2><span class="num">6</span>Intellectual Property</h2>
-    <p>The Game and everything in it, including its code, artwork, vehicles, characters, sounds, music, levels, text and logos, are owned by <strong>Your Studio</strong> or its licensors and are protected by copyright and other laws.</p><p>These Terms do not give you any ownership rights. All rights not expressly granted are reserved.</p>
+    <p>The Game and everything in it, including its code, artwork, vehicles, characters, sounds, music, levels, text and logos, are owned by <strong>NG Studio</strong> or its licensors and are protected by copyright and other laws.</p><p>These Terms do not give you any ownership rights. All rights not expressly granted are reserved.</p>
   </section>
 
   <section class="card" id="disclaimer">
@@ -471,7 +528,7 @@
 
   <section class="card" id="liability">
     <h2><span class="num">8</span>Limitation of Liability</h2>
-    <p>To the maximum extent permitted by law, Your Studio will not be liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of data, progress or virtual items, arising from your use of, or inability to use, the Game.</p><p>Some places don't allow these limits, so they may not fully apply to you.</p>
+    <p>To the maximum extent permitted by law, NG Studio will not be liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of data, progress or virtual items, arising from your use of, or inability to use, the Game.</p><p>Some places don't allow these limits, so they may not fully apply to you.</p>
   </section>
 
   <section class="card" id="termination">
@@ -492,24 +549,36 @@
   <section class="card" id="contact">
     <h2><span class="num">12</span>Contact Us</h2>
     <p>Questions about these Terms? We're happy to help.</p>
-    <div class="contact-box">
-      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="7" width="36" height="26" rx="7" fill="#FFC107" stroke="#1A3A6B" stroke-width="3"/><path d="M5 11 L20 22 L35 11" fill="none" stroke="#1A3A6B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="studio-card">
+      <img src="ng_studio_logo.png" alt="NG Studio logo">
       <div>
-        <strong>Your Studio</strong>
-        <span class="email">support@yourstudio.com</span>
-        <small>We usually reply within a few days.</small>
+        <small>Official studio</small>
+        <strong>NG STUDIO</strong>
       </div>
+    </div>
+    <div class="dev-info">
+      <p class="dev-label">Developer</p>
+      <p><span class="company">NGENDEV TECHNOLABS LLP</span> (NGD Technolab)</p>
+      <p>1213, R K PRIME, 12TH, NEAR NANA MAVA CIRCLE, 150 FEET RING ROAD</p>
+      <p>Rajkot, Gujarat 360005, India</p>
+      <div class="dev-row"><b>Phone:</b> <a href="tel:+919023785087">+91 90237 85087</a></div>
+      <div class="dev-row"><b>Email:</b> <a href="mailto:store.ngdtechnolab@gmail.com">store.ngdtechnolab@gmail.com</a></div>
+      <p><small>We usually reply within a few days.</small></p>
     </div>
   </section>
 </main>
 
 <footer>
+  <div class="provided">
+    <span>Provided by</span>
+    <img src="ng_studio_logo.png" alt="NG Studio">
+  </div>
   <div class="footer-road" aria-hidden="true">
     <svg class="mini-car" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#EC407A" stroke="#1A3A6B" stroke-width="2"/><rect x="24" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M8 11 h10 M14 7 l4 4 l-4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <svg class="mini-car two" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#7CB342" stroke="#1A3A6B" stroke-width="2"/><rect x="10" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M38 11 h-10 M32 7 l-4 4 l4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <svg class="mini-car three" viewBox="0 0 46 22"><rect x="2" y="3" width="42" height="16" rx="6" fill="#1E88E5" stroke="#1A3A6B" stroke-width="2"/><rect x="24" y="6" width="12" height="10" rx="3" fill="#B3E5FC"/><path d="M8 11 h10 M14 7 l4 4 l-4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
-  <div class="copy">© 2026 Your Studio · Traffic Jam Rush</div>
+  <div class="copy">© 2026 NG Studio · Traffic Jam Rush</div>
 </footer>
 
 <script>

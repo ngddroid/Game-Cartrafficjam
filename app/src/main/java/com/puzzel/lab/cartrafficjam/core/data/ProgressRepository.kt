@@ -71,7 +71,8 @@ class ProgressRepository(private val context: Context, private val scope: Corout
             onboardingDone = p[K.onboarding] ?: false,
             dailyStreak = p[K.streak] ?: 0,
             lastDailyDay = p[K.lastDaily] ?: -1,
-            modeLevels = GameMode.entries.filter { it != GameMode.CLASSIC }.associateWith { p[K.mode(it)] ?: 1 },
+            modeLevels = GameMode.entries.filter { it != GameMode.CLASSIC }
+                .associateWith { (p[K.mode(it)] ?: 1).coerceIn(1, TOTAL_LEVELS + 1) },
             loaded = true,
         ).also {
             // Level 1 and collection 1 are always open.
@@ -108,7 +109,8 @@ class ProgressRepository(private val context: Context, private val scope: Corout
         p[K.onboarding] = s.onboardingDone
         p[K.streak] = s.dailyStreak
         p[K.lastDaily] = s.lastDailyDay
-        GameMode.entries.filter { it != GameMode.CLASSIC }.forEach { p[K.mode(it)] = s.modeLevel(it) }
+        // Saved raw so "finished" (TOTAL_LEVELS + 1) survives a restart.
+        GameMode.entries.filter { it != GameMode.CLASSIC }.forEach { p[K.mode(it)] = s.modeLevels[it] ?: 1 }
     }
 
     // --- Progress ---------------------------------------------------------------------------
@@ -133,9 +135,12 @@ class ProgressRepository(private val context: Context, private val scope: Corout
         return openedCollection
     }
 
-    /** Records a win in Crowd Loop, Pixel Crowd or Sand Sweep and moves that mode on one level. */
+    /**
+     * Records a win in Crowd Loop, Pixel Crowd or Sand Sweep and moves that mode on one level.
+     * Each mode has [TOTAL_LEVELS] levels; beating the last one marks the mode finished.
+     */
     fun completeModeLevel(mode: GameMode, level: Int, coins: Int) = mutate { s ->
-        val next = maxOf(s.modeLevel(mode), level + 1)
+        val next = maxOf(s.modeLevels[mode] ?: 1, level + 1).coerceAtMost(TOTAL_LEVELS + 1)
         s.copy(modeLevels = s.modeLevels + (mode to next), coins = s.coins + coins)
     }
 

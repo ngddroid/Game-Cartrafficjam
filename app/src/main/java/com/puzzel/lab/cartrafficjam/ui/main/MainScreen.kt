@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,7 +34,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -150,37 +153,55 @@ fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpe
 
 @Composable
 private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    val barShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     Box(
         Modifier
             .fillMaxWidth()
+            .shadow(20.dp, barShape, clip = false, ambientColor = Color(0xFF05122E), spotColor = Color(0xFF05122E))
+            .clip(barShape)
             .drawBehind {
-                drawRect(Color(0xFF0E3A8C), Offset(0f, 0f), size)
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF3D8BFF), Color(0xFF1C5BD0))), Offset(0f, 4.dp.toPx()), Size(size.width, size.height - 4.dp.toPx()))
-                drawRect(Color(0xFFFFF3D6), Offset(0f, 0f), Size(size.width, 4.dp.toPx()))
+                // Deep navy dock — contrasts against the light sky background.
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF16356E), Color(0xFF0A2048))), Offset(0f, 3.dp.toPx()), size)
+                // Bright top rim so the dock reads as a raised surface.
+                drawRect(Color(0xFF6FA8FF), Offset(0f, 0f), Size(size.width, 3.dp.toPx()))
+                drawRect(Color(0x33FFFFFF), Offset(0f, 3.dp.toPx()), Size(size.width, 1.dp.toPx()))
             }
             .navigationBarsPadding()
-            .height(74.dp),
+            .height(76.dp),
     ) {
         Row(Modifier.fillMaxSize()) {
-            Tab.entries.forEach { t ->
+            Tab.entries.forEachIndexed { index, t ->
                 val sel = t == selected
                 val weight by animateFloatAsState(if (sel) 1.45f else 1f, spring(dampingRatio = 0.7f), label = "w")
                 val lift by animateDpAsState(if (sel) (-16).dp else 0.dp, spring(dampingRatio = 0.5f, stiffness = 500f), label = "lift")
                 val scale by animateFloatAsState(if (sel) 1.25f else 1f, spring(dampingRatio = 0.5f), label = "s")
+                val glow by animateFloatAsState(if (sel) 1f else 0f, spring(dampingRatio = 0.6f), label = "g")
                 Box(
                     Modifier
                         .weight(weight)
                         .fillMaxHeight()
                         .clickable(remember { MutableInteractionSource() }, null) { onSelect(t) }
                         .drawBehind {
-                            if (sel) {
+                            if (glow > 0f) {
+                                val inset = 5.dp.toPx()
+                                // Soft glow halo behind the active pill.
                                 drawRoundRect(
-                                    Brush.verticalGradient(listOf(Color(0xFF7FB8FF), Color(0xFF3C82F0))),
-                                    Offset(2.dp.toPx(), 4.dp.toPx()), Size(size.width - 4.dp.toPx(), size.height - 4.dp.toPx()),
-                                    CornerRadius(14.dp.toPx(), 14.dp.toPx()),
+                                    Color(0xFF4F9BFF).copy(alpha = 0.35f * glow),
+                                    Offset(inset - 3.dp.toPx(), 5.dp.toPx()),
+                                    Size(size.width - 2 * inset + 6.dp.toPx(), size.height - 10.dp.toPx()),
+                                    CornerRadius(20.dp.toPx(), 20.dp.toPx()),
+                                )
+                                // Bright raised pill that pops against the dark dock.
+                                drawRoundRect(
+                                    Brush.verticalGradient(listOf(Color(0xFF8FC2FF), Color(0xFF3B82F6))),
+                                    Offset(inset, 7.dp.toPx()),
+                                    Size(size.width - 2 * inset, size.height - 14.dp.toPx()),
+                                    CornerRadius(16.dp.toPx(), 16.dp.toPx()),
                                 )
                             }
-                            drawRect(Color(0x33000000), Offset(size.width - 1.dp.toPx(), 10.dp.toPx()), Size(1.dp.toPx(), size.height - 20.dp.toPx()))
+                            if (index < Tab.entries.lastIndex) {
+                                drawRect(Color(0x1AFFFFFF), Offset(size.width - 1.dp.toPx(), 16.dp.toPx()), Size(1.dp.toPx(), size.height - 32.dp.toPx()))
+                            }
                         },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -189,8 +210,8 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                     }
                     if (sel) {
                         OutlinedText(
-                            t.label, Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp),
-                            style = GameText.Button, fontSize = 15.sp, strokeWidth = 5f, outline = Color(0xFF0E3A8C),
+                            t.label, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
+                            style = GameText.Button, fontSize = 15.sp, strokeWidth = 5f, outline = Color(0xFF0A2048),
                         )
                     }
                 }

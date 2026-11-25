@@ -17,7 +17,10 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 enum class Shape(val fill: Float) {
-    RECT(1f), CIRCLE(0.78f), DIAMOND(0.55f), HEART(0.62f), FLOWER(0.62f), RING(0.64f), CROSS(0.6f), HEX(0.76f);
+    RECT(1f), CIRCLE(0.78f), DIAMOND(0.55f), HEART(0.62f), FLOWER(0.62f), RING(0.64f), CROSS(0.6f), HEX(0.76f),
+
+    // Used by the game modes (Crowd Loop, Sand Sweep); Classic keeps its own set.
+    STAR(0.55f), TRIANGLE(0.52f), CLOVER(0.7f), HOURGLASS(0.62f), CRESCENT(0.48f);
 
     /** Whether the cell centre (u, v) in [-1, 1]² lies inside the shape. */
     fun contains(u: Float, v: Float): Boolean {
@@ -35,6 +38,16 @@ enum class Shape(val fill: Float) {
             RING -> r <= 1.04f && r >= 0.36f
             CROSS -> abs(u) <= 0.46f || abs(v) <= 0.46f
             HEX -> abs(v) <= 0.92f && abs(u) * 0.866f + abs(v) * 0.5f <= 0.95f
+            STAR -> {
+                // Five points, one straight up (v grows downwards).
+                val k = (cos(5 * (atan2(v, u) + Math.PI.toFloat() / 2)) + 1) / 2
+                r <= 0.5f + 0.56f * k * k
+            }
+            TRIANGLE -> v >= -0.98f && v <= 0.98f && abs(u) <= (v + 1f) * 0.52f
+            CLOVER -> listOf(0.46f to 0f, -0.46f to 0f, 0f to 0.46f, 0f to -0.46f)
+                .any { (cx, cy) -> (u - cx) * (u - cx) + (v - cy) * (v - cy) <= 0.3f }
+            HOURGLASS -> abs(v) <= 0.98f && abs(u) <= abs(v) + 0.28f
+            CRESCENT -> r <= 1.04f && (u - 0.5f) * (u - 0.5f) + (v + 0.12f) * (v + 0.12f) >= 0.6f
         }
     }
 }

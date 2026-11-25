@@ -25,7 +25,7 @@ import com.puzzel.lab.cartrafficjam.game.engine.GameFx
 import com.puzzel.lab.cartrafficjam.game.gen.DifficultyCurve
 import com.puzzel.lab.cartrafficjam.game.gen.Grid
 import com.puzzel.lab.cartrafficjam.game.gen.LevelGenerator
-import com.puzzel.lab.cartrafficjam.game.gen.Shape
+import com.puzzel.lab.cartrafficjam.game.gen.ModeCurve
 import com.puzzel.lab.cartrafficjam.game.model.Difficulty
 import com.puzzel.lab.cartrafficjam.game.model.Level
 import com.puzzel.lab.cartrafficjam.game.model.VehicleSpec
@@ -136,7 +136,7 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     private val flyers = ArrayList<Flyer>()
     private val rnd = Random(level * 31 + 9)
 
-    var capacity = START_CAPACITY
+    var capacity = ModeCurve.sandBeltCapacity(level)
         private set
     val onBelt get() = trucks.count {
         it.state == TState.DRIVING || it.state == TState.WAITING || it.state == TState.MERGING || (it.state == TState.BELT && !it.full)
@@ -311,12 +311,14 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     /** The merge lane runs left to right just under the belt; trucks queue there facing east. */
     private val laneY get() = beltBottom + 12 * u + art.bodyW() * beltScale / 2
     private val laneSpacing get() = art.bodyL(com.puzzel.lab.cartrafficjam.game.model.VehicleType.BUS) * beltScale + 6 * u
-    private val laneFront get() = track.left + laneSpacing * 2
+    /** The lane ends at the middle of the screen, so trucks merge onto the belt at the center. */
+    private val laneEnd get() = width / 2
+    private val laneFront get() = laneEnd - 54 * u
 
     /** Queue position [k]: 0 is the front, nearest the merge point. */
     private fun laneSpot(k: Int) = Offset(laneFront - k * laneSpacing, laneY)
 
-    private val mergeEnd get() = Offset(laneFront + 74 * u, beltY)
+    private val mergeEnd get() = Offset(laneEnd + 20 * u, beltY)
 
     override fun unlockSpot(index: Int) {
         if (capacity >= MAX_CAPACITY) return
@@ -791,7 +793,6 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     companion object {
         const val GW = 180
         const val GH = 128
-        const val START_CAPACITY = 5
         const val MAX_CAPACITY = 8
         private const val BELT_SPEED = 52f
         private const val EAT_RATE = 330f
@@ -897,12 +898,12 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             for (c in colors) depth[c] /= count[c]
 
             val difficulty = DifficultyCurve.difficulty(n)
-            val vehicles = (colors.size + 4 + n * 0.7f).roundToInt().coerceIn(colors.size + 3, 26)
+            val vehicles = ModeCurve.sandTrucks(n, colors.size)
             val lot = LevelGenerator.custom(n, n * 9_173L + 12_345L) { r ->
                 DifficultyCurve.sized(
                     vehicles = vehicles,
                     colors = 1,
-                    shape = if (n < 5) Shape.RECT else listOf(Shape.RECT, Shape.CIRCLE, Shape.HEX, Shape.DIAMOND)[r.nextInt(4)],
+                    shape = ModeCurve.lotShape(n),
                     rotation = 0f,
                     scramble = 0f,
                     difficulty = difficulty,
@@ -920,11 +921,13 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
                 val c = colors.maxBy { count[it].toFloat() / share[it]!! }
                 share[c] = share[c]!! + 1
             }
-            // Colors near the bottom of the picture come out of the lot first.
+            // Colors near the bottom of the picture come out of the lot first. The jitter loosens
+            // that order as levels go on, so some trucks have to wait on the belt.
+            val jitter = ModeCurve.sandOrderJitter(n)
             val tokens = ArrayList<Pair<Float, Int>>()
             for (c in colors) {
                 val m = share[c]!!
-                for (j in 0 until m) tokens += (depth[c] * 1.1f + (j + 0.5f) / m + rng.nextFloat() * 0.25f) to c
+                for (j in 0 until m) tokens += (depth[c] * 1.1f + (j + 0.5f) / m + rng.nextFloat() * jitter) to c
             }
             tokens.sortBy { it.first }
             // Vehicles are listed so that reversed order is a removal order.

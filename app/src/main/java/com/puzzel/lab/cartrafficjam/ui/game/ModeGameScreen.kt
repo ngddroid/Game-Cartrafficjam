@@ -53,6 +53,7 @@ import com.puzzel.lab.cartrafficjam.App
 import com.puzzel.lab.cartrafficjam.core.audio.Haptic
 import com.puzzel.lab.cartrafficjam.core.audio.Music
 import com.puzzel.lab.cartrafficjam.core.audio.Sfx
+import com.puzzel.lab.cartrafficjam.core.data.TOTAL_LEVELS
 import com.puzzel.lab.cartrafficjam.game.engine.GameFx
 import com.puzzel.lab.cartrafficjam.game.model.Difficulty
 import com.puzzel.lab.cartrafficjam.game.model.GameMode
@@ -90,7 +91,7 @@ fun ModeGameScreen(mode: GameMode, levelNumber: Int, onHome: () -> Unit, onPlayL
             skin = Skin.of(player.skin),
             onHome = onHome,
             onRetry = { attempt++ },
-            onNext = { onPlayLevel(levelNumber + 1) },
+            onNext = { onPlayLevel((levelNumber + 1).coerceAtMost(TOTAL_LEVELS)) },
         )
     }
 }

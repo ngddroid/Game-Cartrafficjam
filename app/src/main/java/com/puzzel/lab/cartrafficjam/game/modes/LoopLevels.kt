@@ -2,11 +2,10 @@ package com.puzzel.lab.cartrafficjam.game.modes
 
 import com.puzzel.lab.cartrafficjam.game.gen.DifficultyCurve
 import com.puzzel.lab.cartrafficjam.game.gen.LevelGenerator
-import com.puzzel.lab.cartrafficjam.game.gen.Shape
+import com.puzzel.lab.cartrafficjam.game.gen.ModeCurve
+import com.puzzel.lab.cartrafficjam.game.gen.Solver
 import com.puzzel.lab.cartrafficjam.game.model.Level
 import com.puzzel.lab.cartrafficjam.game.model.QueueStyle
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * Crowd Loop levels: a small lot of big-capacity vehicles and a crowd four times the size.
@@ -25,29 +24,27 @@ object LoopLevels {
     private fun build(n: Int): Level {
         val difficulty = DifficultyCurve.difficulty(n)
         val base = LevelGenerator.custom(n, n * 7_919L + 31_337L) { rng ->
-            val vehicles = min(17, (4 + n * 0.85f).roundToInt() + rng.nextInt(2)) +
-                if (difficulty == com.puzzel.lab.cartrafficjam.game.model.Difficulty.NORMAL) 0 else 1
-            val colors = when {
-                n <= 2 -> 2
-                n <= 5 -> 3
-                n <= 12 -> 4
-                n <= 30 -> 5
-                else -> 6
-            }
-            val shape = if (n < 4) Shape.RECT else DifficultyCurve.randomShape(rng)
-            val rotation = if (n < 6) 0f else listOf(0f, 0f, 12f, -12f)[rng.nextInt(4)]
+            // Every knob comes from ModeCurve: see it for the level-by-level ramp.
+            val vehicles = ModeCurve.loopVehicles(n, jitter = rng.nextInt(2))
+            val shape = ModeCurve.lotShape(n)
+            val rotation = if (n < 8) 0f else listOf(0f, 0f, 12f, -12f)[rng.nextInt(4)]
             DifficultyCurve.sized(
                 vehicles = vehicles,
-                colors = min(colors, vehicles / 2),
+                colors = ModeCurve.loopColors(n, vehicles),
                 shape = shape,
                 rotation = rotation,
-                scramble = if (n <= 2) 0f else 1.4f,
-                mystery = if (n >= 20) 0.1f else 0f,
-                weights = floatArrayOf(0.25f, 0.35f, 0.4f),
+                scramble = ModeCurve.loopScramble(n),
+                mystery = ModeCurve.loopMystery(n),
+                weights = ModeCurve.loopWeights(n),
                 difficulty = difficulty,
             )
         }
+        // Fewer open stalls on late Super Hard levels, but only if the solver still finishes the
+        // level that way. It checks the unscaled crowd: each rider becoming four in a row
+        // doesn't change whether the level can be finished.
+        val slots = ModeCurve.loopOpenSlots(n)
+        val openSlots = if (slots < base.openSlots && Solver.solves(base.copy(openSlots = slots))) slots else base.openSlots
         val queue = IntArray(base.queue.size * SEAT_SCALE) { base.queue[it / SEAT_SCALE] }
-        return base.copy(queue = queue, seatScale = SEAT_SCALE, queueStyle = QueueStyle.LOOP)
+        return base.copy(queue = queue, seatScale = SEAT_SCALE, queueStyle = QueueStyle.LOOP, openSlots = openSlots)
     }
 }

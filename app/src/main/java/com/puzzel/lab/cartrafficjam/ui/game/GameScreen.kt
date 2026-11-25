@@ -136,7 +136,7 @@ fun GameScreen(levelNumber: Int, onHome: () -> Unit, onPlayLevel: (Int) -> Unit,
             skin = Skin.of(player.skin),
             onHome = onHome,
             onRetry = { attempt++ },
-            onNext = { onPlayLevel(if (mode == GameMode.CLASSIC) (levelNumber + 1).coerceAtMost(TOTAL_LEVELS) else levelNumber + 1) },
+            onNext = { onPlayLevel((levelNumber + 1).coerceAtMost(TOTAL_LEVELS)) },
         )
     }
 }

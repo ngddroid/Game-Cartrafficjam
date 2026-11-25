@@ -28,11 +28,20 @@ data class PlayerState(
     val onboardingDone: Boolean = false,
     val dailyStreak: Int = 0,
     val lastDailyDay: Long = -1,
-    /** Next level to play in each non-classic mode (1-based). */
+    /**
+     * Next level to play in each non-classic mode (1-based). [TOTAL_LEVELS] + 1 means the mode's
+     * last level has been beaten.
+     */
     val modeLevels: Map<GameMode, Int> = emptyMap(),
     val loaded: Boolean = false,
 ) {
-    fun modeLevel(mode: GameMode): Int = if (mode == GameMode.CLASSIC) nextLevel else (modeLevels[mode] ?: 1)
+    /** The level to play next; after the last level it stays on [TOTAL_LEVELS] for replays. */
+    fun modeLevel(mode: GameMode): Int =
+        if (mode == GameMode.CLASSIC) nextLevel else (modeLevels[mode] ?: 1).coerceIn(1, TOTAL_LEVELS)
+
+    /** True once every level of Crowd Loop, Pixel Crowd or Sand Sweep has been beaten. */
+    fun modeFinished(mode: GameMode): Boolean =
+        if (mode == GameMode.CLASSIC) isCompleted(TOTAL_LEVELS) else (modeLevels[mode] ?: 1) > TOTAL_LEVELS
 
     fun isLevelUnlocked(level: Int) = level in 1..TOTAL_LEVELS && unlockedLevels[level]
     fun starsOf(level: Int): Int = if (level in 1..TOTAL_LEVELS) stars[level].toInt() else 0

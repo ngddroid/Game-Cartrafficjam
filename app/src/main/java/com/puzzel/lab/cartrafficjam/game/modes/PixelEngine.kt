@@ -106,7 +106,8 @@ class PixelEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(l
     }
 
     val lanes: List<ArrayDeque<Bus>>
-    val stops = Array(STOPS) { Stop(it < OPEN_STOPS) }
+    // Three stops open normally, two on late Super Hard levels; the rest open with an ad.
+    val stops = Array(STOPS) { Stop(it < com.puzzel.lab.cartrafficjam.game.gen.ModeCurve.pixelOpenStops(level)) }
     private val walkers = ArrayList<Walker>()
     private val rnd = Random(level * 13 + 5)
 
@@ -851,7 +852,6 @@ class PixelEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(l
     companion object {
         const val LANES = 3
         const val STOPS = 4
-        const val OPEN_STOPS = 3
         private const val BOARD_INTERVAL = 0.013f
         private const val RUN_SPEED = 175f
         private const val NAV_MARGIN = 2
@@ -866,15 +866,9 @@ class PixelEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(l
             val w = picture.w
             val h = picture.h
             val cells = picture.cells.copyOf()
-            // Buses get smaller as levels go on, so there are more of them to juggle.
-            val maxCap = when {
-                level <= 3 -> 48
-                level <= 10 -> 36
-                level <= 25 -> 30
-                level <= 60 -> 24
-                level <= 150 -> 20
-                else -> 16
-            }
+            // Buses get smaller as levels go on, so there are more of them to juggle; peaks
+            // (Hard / Super Hard) shrink them further and breathers enlarge them.
+            val maxCap = com.puzzel.lab.cartrafficjam.game.gen.ModeCurve.pixelBusCap(level)
             val out = BooleanArray(w * h)
             fun flood() {
                 out.fill(false)
