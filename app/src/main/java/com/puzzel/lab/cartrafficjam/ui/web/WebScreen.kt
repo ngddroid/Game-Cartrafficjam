@@ -27,6 +27,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.puzzel.lab.cartrafficjam.ui.components.OutlinedText
 import com.puzzel.lab.cartrafficjam.ui.components.RoundButton
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 /** Shows one of the bundled HTML documents from assets. */
 @SuppressLint("SetJavaScriptEnabled")
@@ -36,23 +37,23 @@ fun WebScreen(doc: String, onBack: () -> Unit) {
         "terms" -> "Terms of Service" to "terms_of_service.html"
         else -> "Privacy Policy" to "privacy_policy.html"
     }
-    Column(Modifier.fillMaxSize().background(Color(0xFF1E88E5))) {
+    Column(Modifier.fillMaxSize().background(Sunset.SkyBottom)) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color(0xFF1C5BD0), Color(0xFF2F7CF6))))
+                .background(Brush.verticalGradient(listOf(Sunset.HeaderTop, Sunset.HeaderBottom)))
                 .statusBarsPadding()
                 .padding(horizontal = 10.dp, vertical = 8.dp),
         ) {
             RoundButton(onBack, Modifier.align(Alignment.CenterStart), size = 44.dp) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
             }
-            OutlinedText(title, Modifier.align(Alignment.Center), style = GameText.Title, fontSize = 24.sp, strokeWidth = 6f, outline = Color(0xFF0D2C6B))
+            OutlinedText(title, Modifier.align(Alignment.Center), style = GameText.Title, fontSize = 24.sp, strokeWidth = 6f, outline = Sunset.Outline)
         }
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
-                    setBackgroundColor(android.graphics.Color.parseColor("#1E88E5"))
+                    setBackgroundColor(android.graphics.Color.parseColor("#E94F6A"))
                     settings.javaScriptEnabled = true
                     settings.allowFileAccess = true
                     webViewClient = object : WebViewClient() {

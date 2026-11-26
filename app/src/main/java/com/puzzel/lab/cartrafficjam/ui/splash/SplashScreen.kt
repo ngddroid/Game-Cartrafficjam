@@ -53,6 +53,7 @@ import com.puzzel.lab.cartrafficjam.ui.components.SunRays
 import com.puzzel.lab.cartrafficjam.ui.components.VehicleSprite
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 import kotlinx.coroutines.delay
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 @Composable
 fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
@@ -127,7 +128,7 @@ fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .height(26.dp)
-                    .background(Color(0xFF0D2C6B), RoundedCornerShape(13.dp))
+                    .background(Sunset.Outline, RoundedCornerShape(13.dp))
                     .padding(4.dp)
                     .drawBehind {
                         val w = size.width * load.value

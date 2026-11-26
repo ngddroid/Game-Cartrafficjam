@@ -70,6 +70,7 @@ import com.puzzel.lab.cartrafficjam.ui.components.VehicleSprite
 import com.puzzel.lab.cartrafficjam.ui.components.WorldArt
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 import kotlinx.coroutines.launch
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 private class Page(val title: String, val body: String)
 
@@ -116,7 +117,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.height(28.dp))
-                    OutlinedText(page.title, style = GameText.Display, fontSize = 38.sp, color = Color(0xFFFFE14D), outline = Color(0xFF0D2C6B), strokeWidth = 12f)
+                    OutlinedText(page.title, style = GameText.Display, fontSize = 38.sp, color = Color(0xFFFFE14D), outline = Sunset.Outline, strokeWidth = 12f)
                     Spacer(Modifier.height(12.dp))
                     Text(
                         page.body,
@@ -313,7 +314,7 @@ private fun WorldsDemo() {
                     .graphicsLayer { rotationZ = angle }
                     .size(120.dp, 168.dp)
                     .drawBehind {
-                        drawRoundRect(Color(0xFF0D2C6B), Offset(0f, 5.dp.toPx()), size, CornerRadius(18.dp.toPx()))
+                        drawRoundRect(Sunset.Outline, Offset(0f, 5.dp.toPx()), size, CornerRadius(18.dp.toPx()))
                         drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(18.dp.toPx()))
                     }
                     .padding(5.dp)
@@ -329,7 +330,7 @@ private fun WorldsDemo() {
             }
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = 6.dp)) {
-            OutlinedText("50 Worlds", style = GameText.Title, fontSize = 26.sp, strokeWidth = 7f, outline = Color(0xFF0D2C6B))
+            OutlinedText("50 Worlds", style = GameText.Title, fontSize = 26.sp, strokeWidth = 7f, outline = Sunset.Outline)
         }
         Mascot(80.dp, Modifier.align(Alignment.BottomEnd).padding(8.dp))
         Box(

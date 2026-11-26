@@ -76,6 +76,7 @@ import com.puzzel.lab.cartrafficjam.ui.components.VehicleSprite
 import com.puzzel.lab.cartrafficjam.ui.components.WorldArt
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 private val DAILY = listOf(20, 30, 40, 60, 80, 100, 200)
 
@@ -114,7 +115,7 @@ fun HomeTab(player: PlayerState, onPlay: () -> Unit, onSettings: () -> Unit, onW
                     .fillMaxWidth()
                     .offset(y = (-14).dp)
                     .drawBehind {
-                        drawRoundRect(Color(0xFF0D2C6B), Offset(0f, 6.dp.toPx()), size, CornerRadius(24.dp.toPx()))
+                        drawRoundRect(Sunset.Outline, Offset(0f, 6.dp.toPx()), size, CornerRadius(24.dp.toPx()))
                         drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(24.dp.toPx()))
                     }
                     .padding(5.dp)
@@ -126,7 +127,7 @@ fun HomeTab(player: PlayerState, onPlay: () -> Unit, onSettings: () -> Unit, onW
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC0D2C6B))))
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Sunset.Outline.copy(alpha = 0.8f))))
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

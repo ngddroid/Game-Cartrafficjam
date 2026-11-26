@@ -3,7 +3,7 @@ package com.puzzel.lab.cartrafficjam.ui.main
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -22,19 +22,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -55,25 +52,36 @@ import com.puzzel.lab.cartrafficjam.ui.components.GameIcon
 import com.puzzel.lab.cartrafficjam.ui.components.Icon
 import com.puzzel.lab.cartrafficjam.ui.components.LocalAudio
 import com.puzzel.lab.cartrafficjam.ui.components.OutlinedText
-import com.puzzel.lab.cartrafficjam.ui.components.SkyBackground
+import com.puzzel.lab.cartrafficjam.ui.components.TownBackground
 import com.puzzel.lab.cartrafficjam.ui.components.WatchAdDialog
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
+import com.puzzel.lab.cartrafficjam.ui.theme.LocalTabPalette
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
+import com.puzzel.lab.cartrafficjam.ui.theme.TabPalette
+import com.puzzel.lab.cartrafficjam.ui.theme.TabPalettes
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
-enum class Tab(val label: String, val icon: Icon) {
-    LEVELS("Levels", Icon.MAP),
-    MODES("Modes", Icon.MODES),
-    HOME("Home", Icon.HOME),
-    GARAGE("Garage", Icon.GARAGE),
-    SETTINGS("Settings", Icon.GEAR),
+enum class Tab(val label: String, val icon: Icon, val palette: TabPalette) {
+    LEVELS("Levels", Icon.MAP, TabPalettes.Levels),
+    MODES("Modes", Icon.GAMEPAD, TabPalettes.Modes),
+    HOME("Home", Icon.HOME, TabPalettes.Home),
+    GARAGE("Garage", Icon.GARAGE, TabPalettes.Garage),
+    SETTINGS("Settings", Icon.GEAR, TabPalettes.Settings),
 }
 
 @Composable
-fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpenDoc: (String) -> Unit) {
+fun MainScreen(
+    onPlay: (Int) -> Unit,
+    onPlayMode: (GameMode, Int) -> Unit,
+    onOpenDoc: (String) -> Unit,
+    initialTab: Tab = Tab.HOME,
+) {
     val container = App.container
     val audio = LocalAudio.current
     val progress = container.progress
     val player by progress.state.collectAsState()
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    var tab by rememberSaveable { mutableStateOf(initialTab) }
     var scrollToCollection by remember { mutableIntStateOf(0) }
     var lockedLevel by remember { mutableStateOf<Int?>(null) }
     var confirmExit by remember { mutableStateOf(false) }
@@ -85,7 +93,14 @@ fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpe
         if (tab != Tab.HOME) tab = Tab.HOME else confirmExit = true
     }
 
-    SkyBackground {
+    // The background fades into each tab's own colors.
+    val skyAnim = tween<Color>(450)
+    val skyTop by animateColorAsState(tab.palette.skyTop, skyAnim, label = "skyTop")
+    val skyMid by animateColorAsState(tab.palette.skyMid, skyAnim, label = "skyMid")
+    val skyBottom by animateColorAsState(tab.palette.skyBottom, skyAnim, label = "skyBottom")
+    // Home (and Levels, under its map) show the cartoon town; Modes, Garage and Settings are purple gradients.
+    val scenery by animateFloatAsState(if (tab == Tab.HOME || tab == Tab.LEVELS) 1f else 0f, tween(450), label = "scenery")
+    TownBackground(top = skyTop, mid = skyMid, bottom = skyBottom, sceneryAlpha = scenery) {
         Column(Modifier.fillMaxSize()) {
             AnimatedContent(
                 tab,
@@ -93,6 +108,7 @@ fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpe
                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
                 label = "tab",
             ) { t ->
+                CompositionLocalProvider(LocalTabPalette provides t.palette) {
                 when (t) {
                     Tab.HOME -> HomeTab(
                         player = player,
@@ -116,6 +132,7 @@ fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpe
                     )
                     Tab.GARAGE -> GarageTab(player)
                     Tab.SETTINGS -> SettingsTab(player, onOpenDoc)
+                }
                 }
             }
             BottomBar(tab) {
@@ -151,67 +168,83 @@ fun MainScreen(onPlay: (Int) -> Unit, onPlayMode: (GameMode, Int) -> Unit, onOpe
 
 }
 
+/** Navbar colors: a soft purple dock with a lighter lavender tile for the selected tab. */
+private val NavDockTop = Color(0xFF7E64EC)
+private val NavDockBottom = Color(0xFF4A35B5)
+private val NavRim = Color(0xFFB6A6FF)
+private val NavTileTop = Color(0xFFC3B3FF)
+private val NavTileBottom = Color(0xFF9A82F6)
+private val NavInk = Color(0xFF2E1E86)
+
 @Composable
 private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
-    val barShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     Box(
         Modifier
             .fillMaxWidth()
-            .shadow(20.dp, barShape, clip = false, ambientColor = Color(0xFF05122E), spotColor = Color(0xFF05122E))
-            .clip(barShape)
             .drawBehind {
-                // Deep navy dock — contrasts against the light sky background.
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF16356E), Color(0xFF0A2048))), Offset(0f, 3.dp.toPx()), size)
-                // Bright top rim so the dock reads as a raised surface.
-                drawRect(Color(0xFF6FA8FF), Offset(0f, 0f), Size(size.width, 3.dp.toPx()))
-                drawRect(Color(0x33FFFFFF), Offset(0f, 3.dp.toPx()), Size(size.width, 1.dp.toPx()))
+                // Purple dock with rounded top corners (the bottom ones run off the screen).
+                val r = CornerRadius(28.dp.toPx())
+                val tall = Size(size.width, size.height + 60.dp.toPx())
+                drawRoundRect(Color.Black.copy(alpha = 0.25f), Offset(0f, -6.dp.toPx()), tall, r)
+                drawRoundRect(NavInk, Offset.Zero, tall, r)
+                drawRoundRect(NavRim, Offset(0f, 2.dp.toPx()), tall, r)
+                drawRoundRect(Brush.verticalGradient(listOf(NavDockTop, NavDockBottom), 0f, size.height), Offset(0f, 5.dp.toPx()), tall, r)
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.18f), Offset(30.dp.toPx(), 8.dp.toPx()),
+                    Size(size.width - 60.dp.toPx(), 3.dp.toPx()), CornerRadius(1.5f.dp.toPx()),
+                )
             }
             .navigationBarsPadding()
-            .height(76.dp),
+            .height(80.dp),
     ) {
         Row(Modifier.fillMaxSize()) {
             Tab.entries.forEachIndexed { index, t ->
                 val sel = t == selected
-                val weight by animateFloatAsState(if (sel) 1.45f else 1f, spring(dampingRatio = 0.7f), label = "w")
-                val lift by animateDpAsState(if (sel) (-16).dp else 0.dp, spring(dampingRatio = 0.5f, stiffness = 500f), label = "lift")
-                val scale by animateFloatAsState(if (sel) 1.25f else 1f, spring(dampingRatio = 0.5f), label = "s")
-                val glow by animateFloatAsState(if (sel) 1f else 0f, spring(dampingRatio = 0.6f), label = "g")
+                val weight by animateFloatAsState(if (sel) 1.5f else 1f, spring(dampingRatio = 0.7f), label = "w")
+                val on by animateFloatAsState(if (sel) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 450f), label = "on")
                 Box(
                     Modifier
                         .weight(weight)
                         .fillMaxHeight()
                         .clickable(remember { MutableInteractionSource() }, null) { onSelect(t) }
                         .drawBehind {
-                            if (glow > 0f) {
-                                val inset = 5.dp.toPx()
-                                // Soft glow halo behind the active pill.
+                            if (on > 0.02f) {
+                                // Lighter lavender tile with a white border and a soft inner glow.
+                                val inset = 6.dp.toPx()
+                                val tl = Offset(inset, 10.dp.toPx() - 4.dp.toPx() * on)
+                                val sz = Size(size.width - 2 * inset, size.height - 14.dp.toPx() + 4.dp.toPx() * on)
+                                val rr = CornerRadius(18.dp.toPx())
+                                drawRoundRect(NavInk.copy(alpha = 0.5f * on), tl + Offset(0f, 3.dp.toPx()), sz, rr)
+                                drawRoundRect(Color.White.copy(alpha = on), tl, sz, rr)
                                 drawRoundRect(
-                                    Color(0xFF4F9BFF).copy(alpha = 0.35f * glow),
-                                    Offset(inset - 3.dp.toPx(), 5.dp.toPx()),
-                                    Size(size.width - 2 * inset + 6.dp.toPx(), size.height - 10.dp.toPx()),
-                                    CornerRadius(20.dp.toPx(), 20.dp.toPx()),
+                                    Brush.verticalGradient(listOf(NavTileTop, NavTileBottom), tl.y, tl.y + sz.height),
+                                    tl + Offset(2.5.dp.toPx(), 2.5.dp.toPx()), Size(sz.width - 5.dp.toPx(), sz.height - 5.dp.toPx()),
+                                    CornerRadius(16.dp.toPx()), alpha = on,
                                 )
-                                // Bright raised pill that pops against the dark dock.
                                 drawRoundRect(
-                                    Brush.verticalGradient(listOf(Color(0xFF8FC2FF), Color(0xFF3B82F6))),
-                                    Offset(inset, 7.dp.toPx()),
-                                    Size(size.width - 2 * inset, size.height - 14.dp.toPx()),
-                                    CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                                    Color.White.copy(alpha = 0.35f * on), tl + Offset(10.dp.toPx(), 5.dp.toPx()),
+                                    Size(sz.width - 20.dp.toPx(), 6.dp.toPx()), CornerRadius(3.dp.toPx()),
                                 )
                             }
+                            // Soft divider between tabs.
                             if (index < Tab.entries.lastIndex) {
-                                drawRect(Color(0x1AFFFFFF), Offset(size.width - 1.dp.toPx(), 16.dp.toPx()), Size(1.dp.toPx(), size.height - 32.dp.toPx()))
+                                drawRect(Color.White.copy(alpha = 0.16f), Offset(size.width - 1.dp.toPx(), 20.dp.toPx()), Size(1.dp.toPx(), size.height - 36.dp.toPx()))
                             }
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.offset(y = lift).graphicsLayer { scaleX = scale; scaleY = scale }) {
+                    Box(
+                        Modifier
+                            .offset(y = (-2).dp - 9.dp * on)
+                            .graphicsLayer { val k = 1f + 0.12f * on; scaleX = k; scaleY = k },
+                    ) {
                         GameIcon(t.icon, 42.dp)
                     }
-                    if (sel) {
+                    if (on > 0.5f) {
                         OutlinedText(
-                            t.label, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
-                            style = GameText.Button, fontSize = 15.sp, strokeWidth = 5f, outline = Color(0xFF0A2048),
+                            t.label,
+                            Modifier.align(Alignment.BottomCenter).padding(bottom = 7.dp).graphicsLayer { alpha = (on - 0.5f) * 2f },
+                            style = GameText.Button, fontSize = 15.sp, strokeWidth = 6f, outline = NavInk, depth = 0.07f,
                         )
                     }
                 }

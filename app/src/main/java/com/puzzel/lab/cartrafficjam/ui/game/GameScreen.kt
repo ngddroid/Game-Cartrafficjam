@@ -109,6 +109,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 internal const val REVIVE_PRICE = 120
 
@@ -282,7 +283,7 @@ private fun GameSession(
         AnimatedVisibility(engine.craneArmed, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) {
             Row(
                 Modifier
-                    .background(Color(0xE61A3A6B), RoundedCornerShape(22.dp))
+                    .background(Sunset.Toast, RoundedCornerShape(22.dp))
                     .border(2.dp, Color(0xFFFFD54F), RoundedCornerShape(22.dp))
                     .padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -457,13 +458,13 @@ private fun QueueSign(engine: GameEngine) {
             Modifier
                 .width(84.dp)
                 .scale(bump.value)
-                .background(Color(0xFF0D47A1), RoundedCornerShape(10.dp))
+                .background(Sunset.Outline, RoundedCornerShape(10.dp))
                 .padding(3.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFF64B5F6), Color(0xFF1E88E5))), RoundedCornerShape(8.dp))
+                .background(Brush.verticalGradient(listOf(Sunset.HeaderTop, Sunset.HeaderBottom)), RoundedCornerShape(8.dp))
                 .padding(vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            OutlinedText("$remaining", style = GameText.Title, fontSize = 22.sp, strokeWidth = 5f, outline = Color(0xFF0D2C6B))
+            OutlinedText("$remaining", style = GameText.Title, fontSize = 22.sp, strokeWidth = 5f, outline = Sunset.Outline)
             Text("Queue", style = GameText.Small.copy(color = Color(0xFFFFE082), fontFamily = TitleFont, fontSize = 12.sp), modifier = Modifier.offset(y = (-4).dp))
         }
         Box(Modifier.size(6.dp, 14.dp).background(Color(0xFF546E7A)))
@@ -547,10 +548,10 @@ private fun BoosterButton(label: String, icon: Icon, count: Int, onClick: () -> 
                 .clickable(interaction, null) { audio.play(Sfx.Click); onClick() }
                 .drawBehind {
                     val r = CornerRadius(18.dp.toPx())
-                    drawRoundRect(Color(0xFF1E5FD0), Offset(0f, 4.dp.toPx()), size, r)
+                    drawRoundRect(Color(0xFFD9541E), Offset(0f, 4.dp.toPx()), size, r)
                     drawRoundRect(Color.White, Offset.Zero, Size(size.width, size.height - 2.dp.toPx()), r)
                     drawRoundRect(
-                        Brush.verticalGradient(listOf(Color(0xFFE9F4FF), Color(0xFFBFDDFF))),
+                        Brush.verticalGradient(listOf(Color(0xFFFFF6E5), Color(0xFFFFD9B0))),
                         Offset(3.dp.toPx(), 3.dp.toPx()), Size(size.width - 6.dp.toPx(), size.height - 8.dp.toPx()), CornerRadius(15.dp.toPx()),
                     )
                 },
@@ -558,7 +559,7 @@ private fun BoosterButton(label: String, icon: Icon, count: Int, onClick: () -> 
         ) {
             Spacer(Modifier.height(5.dp))
             GameIcon(icon, 48.dp)
-            OutlinedText(label, style = GameText.Button, fontSize = 15.sp, strokeWidth = 5f, outline = Color(0xFF1E4FA8))
+            OutlinedText(label, style = GameText.Button, fontSize = 15.sp, strokeWidth = 5f, outline = Sunset.Outline)
         }
         Box(
             Modifier

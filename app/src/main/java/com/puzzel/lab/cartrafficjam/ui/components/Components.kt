@@ -80,12 +80,16 @@ import com.puzzel.lab.cartrafficjam.game.render.tint
 import com.puzzel.lab.cartrafficjam.ui.theme.BodyFont
 import com.puzzel.lab.cartrafficjam.ui.theme.GameColors
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
 import kotlinx.coroutines.delay
 
 val LocalAudio = compositionLocalOf<AudioManager> { App.container.audio }
 
-/** Game-style text: a thick dark stroke under a filled face. */
+/**
+ * Game-style 3D text: a darker extrusion under a thick outline, and a face with a soft
+ * top-to-bottom shine, like the titles in premium casual games.
+ */
 @Composable
 fun OutlinedText(
     text: String,
@@ -96,13 +100,25 @@ fun OutlinedText(
     strokeWidth: Float = 8f,
     fontSize: TextUnit = style.fontSize,
     textAlign: TextAlign = TextAlign.Center,
+    /** Depth of the 3D extrusion as a share of the font size (0 for flat). */
+    depth: Float = 0.09f,
 ) {
+    val stroke = Stroke(strokeWidth, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+    val extrude = (fontSize.value * depth).dp
+    val face = Brush.verticalGradient(listOf(color.tint(0.35f), color, color.shade(0.9f)))
     Box(modifier) {
-        Text(
-            text, style = style.copy(color = outline, fontSize = fontSize, drawStyle = Stroke(strokeWidth, join = androidx.compose.ui.graphics.StrokeJoin.Round), shadow = null),
-            textAlign = textAlign,
-        )
-        Text(text, style = style.copy(color = color, fontSize = fontSize, shadow = null), textAlign = textAlign)
+        if (depth > 0f) {
+            // Extrusion: the outline repeated lower down in a deeper shade, filled solid.
+            Text(
+                text,
+                Modifier.offset(y = extrude),
+                style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, drawStyle = stroke, shadow = null),
+                textAlign = textAlign,
+            )
+            Text(text, Modifier.offset(y = extrude), style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, shadow = null), textAlign = textAlign)
+        }
+        Text(text, style = style.copy(color = outline, fontSize = fontSize, drawStyle = stroke, shadow = null), textAlign = textAlign)
+        Text(text, style = style.copy(brush = face, fontSize = fontSize, shadow = null), textAlign = textAlign)
     }
 }
 
@@ -130,7 +146,7 @@ fun GameButton(
     val pressed by interaction.collectIsPressedAsState()
     val press by animateFloatAsState(if (pressed) 1f else 0f, spring(stiffness = Spring.StiffnessHigh), label = "press")
     val base = if (enabled) color.base else ButtonColor.GRAY.base
-    val lip = 6.dp
+    val lip = 7.dp
     Box(
         modifier
             .height(height)
@@ -144,17 +160,30 @@ fun GameButton(
                 val r = CornerRadius(size.height / 2)
                 val lipPx = lip.toPx() * (1f - press * 0.7f)
                 val top = lip.toPx() - lipPx
-                drawRoundRect(Color.Black.copy(alpha = 0.25f), Offset(0f, lip.toPx() + 2.dp.toPx()), Size(size.width, size.height - lip.toPx()), r)
-                drawRoundRect(base.shade(0.62f), Offset(0f, top + lipPx), Size(size.width, size.height - lip.toPx()), r)
-                drawRoundRect(Color(0xFF2B1B0E).copy(alpha = 0.55f), Offset(0f, top), Size(size.width, size.height - lip.toPx()), r, style = Stroke(2.dp.toPx()))
+                val faceH = size.height - lip.toPx()
+                val ink = base.shade(0.35f)
+                val o = 2.5.dp.toPx()
+                // Soft drop shadow, then the dark toy outline around face + lip.
+                drawRoundRect(Color.Black.copy(alpha = 0.22f), Offset(0f, lip.toPx() + 3.dp.toPx()), Size(size.width, faceH), r)
+                drawRoundRect(ink, Offset(-o, top - o), Size(size.width + 2 * o, faceH + lipPx + 2 * o), CornerRadius(r.x + o))
+                // The lip (side of the button) with a darker band at the bottom.
+                drawRoundRect(Brush.verticalGradient(listOf(base.shade(0.7f), base.shade(0.5f)), top + lipPx, top + faceH + lipPx), Offset(0f, top + lipPx), Size(size.width, faceH), r)
+                // Face with a bevel: light rim, then the main gradient.
+                drawRoundRect(base.tint(0.55f), Offset(0f, top), Size(size.width, faceH), r)
                 drawRoundRect(
-                    Brush.verticalGradient(listOf(base.tint(0.35f), base, base.shade(0.9f)), top, top + size.height - lip.toPx()),
-                    Offset(1.5.dp.toPx(), top + 1.5.dp.toPx()), Size(size.width - 3.dp.toPx(), size.height - lip.toPx() - 3.dp.toPx()), r,
+                    Brush.verticalGradient(listOf(base.tint(0.3f), base, base.shade(0.88f)), top, top + faceH),
+                    Offset(2.dp.toPx(), top + 2.5.dp.toPx()), Size(size.width - 4.dp.toPx(), faceH - 4.5.dp.toPx()), CornerRadius(r.x - 2.dp.toPx()),
                 )
+                // Glossy band across the top half.
                 drawRoundRect(
-                    Color.White.copy(alpha = 0.38f), Offset(size.height * 0.28f, top + 4.dp.toPx()),
-                    Size(size.width - size.height * 0.56f, (size.height - lip.toPx()) * 0.3f), CornerRadius(size.height / 4),
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.12f)), top + 4.dp.toPx(), top + faceH * 0.45f),
+                    Offset(size.height * 0.3f, top + 4.dp.toPx()),
+                    Size(size.width - size.height * 0.6f, faceH * 0.36f), CornerRadius(faceH * 0.18f),
                 )
+                // Little sparkle on the left shoulder.
+                val sp = Offset(size.height * 0.36f, top + faceH * 0.3f)
+                drawCircle(Color.White.copy(alpha = 0.9f), 2.6.dp.toPx(), sp)
+                drawCircle(Color.White.copy(alpha = 0.5f), 1.4.dp.toPx(), sp + Offset(5.dp.toPx(), 3.dp.toPx()))
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -166,7 +195,7 @@ fun GameButton(
             horizontalArrangement = Arrangement.Center,
         ) {
             leading?.let { it(); Spacer(Modifier.width(8.dp)) }
-            OutlinedText(text, style = GameText.Button, fontSize = fontSize, outline = base.shade(0.45f), strokeWidth = 6f)
+            OutlinedText(text, style = GameText.Button, fontSize = fontSize, outline = base.shade(0.4f), strokeWidth = 7f, depth = 0.07f)
             trailing?.let { Spacer(Modifier.width(8.dp)); it() }
         }
     }
@@ -178,7 +207,7 @@ fun RoundButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
-    color: Color = Color(0xFF2F8CF6),
+    color: Color = Sunset.Button,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val audio = LocalAudio.current
@@ -192,10 +221,17 @@ fun RoundButton(
             .clickable(interaction, null) { audio.play(Sfx.Click); audio.haptic(Haptic.Tap); onClick() }
             .drawBehind {
                 val r = this.size.minDimension / 2
-                drawCircle(Color.Black.copy(alpha = 0.25f), r, center + Offset(0f, 3.dp.toPx()))
-                drawCircle(Color.White, r, center)
-                drawCircle(Brush.verticalGradient(listOf(color.tint(0.35f), color, color.shade(0.8f))), r - 3.dp.toPx(), center)
-                drawOval(Color.White.copy(alpha = 0.4f), Offset(r * 0.45f, r * 0.25f), Size(r * 1.1f, r * 0.5f))
+                val ink = color.shade(0.35f)
+                drawCircle(Color.Black.copy(alpha = 0.22f), r, center + Offset(0f, 5.dp.toPx()))
+                // Lip below, then the dark toy outline, a white rim and the glossy face.
+                drawCircle(ink, r, center + Offset(0f, 3.dp.toPx()))
+                drawCircle(ink, r, center)
+                drawCircle(Color.White, r - 2.5.dp.toPx(), center)
+                drawCircle(Brush.verticalGradient(listOf(color.tint(0.35f), color, color.shade(0.78f))), r - 5.dp.toPx(), center)
+                drawOval(
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.1f)), r * 0.3f, r * 0.9f),
+                    Offset(r * 0.42f, r * 0.28f), Size(r * 1.16f, r * 0.58f),
+                )
             },
         contentAlignment = Alignment.Center,
         content = content,
@@ -213,12 +249,12 @@ fun CloseButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Cream card with a thick blue frame and a ribbon title; the house style for every dialog. */
+/** Cream card with a thick orange frame and a ribbon title; the house style for every dialog. */
 @Composable
 fun GamePanel(
     title: String,
     modifier: Modifier = Modifier,
-    frame: Color = Color(0xFF2F7CF6),
+    frame: Color = Sunset.Frame,
     onClose: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -528,22 +564,28 @@ fun GameToast(message: String?, modifier: Modifier = Modifier) {
             message ?: "",
             style = GameText.Label.copy(color = Color.White, fontFamily = BodyFont, fontSize = 16.sp),
             modifier = Modifier
-                .background(Color(0xE61A3A6B), RoundedCornerShape(20.dp))
+                .background(Sunset.Toast, RoundedCornerShape(20.dp))
                 .border(2.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
                 .padding(horizontal = 18.dp, vertical = 10.dp),
         )
     }
 }
 
-/** Soft sky backdrop with drifting clouds shared by menu screens. */
+/** Gradient backdrop with drifting clouds shared by menu screens (sunset unless a tab passes its own colors). */
 @Composable
-fun SkyBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun SkyBackground(
+    modifier: Modifier = Modifier,
+    top: Color = Sunset.SkyTop,
+    mid: Color = Sunset.SkyMid,
+    bottom: Color = Sunset.SkyBottom,
+    content: @Composable BoxScope.() -> Unit,
+) {
     val t = rememberInfiniteTransition(label = "sky")
     val drift by t.animateFloat(0f, 1f, infiniteRepeatable(tween(40000, easing = LinearEasing)), label = "drift")
     Box(
         modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF5CC8FF), Color(0xFF2D8EF0), Color(0xFF1E6FD9))))
+            .background(Brush.verticalGradient(listOf(top, mid, bottom)))
             .drawBehind {
                 val w = size.width
                 fun cloud(x: Float, y: Float, s: Float, a: Float) {

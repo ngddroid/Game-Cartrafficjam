@@ -735,7 +735,9 @@ class PixelEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(l
     private fun DrawScope.drawBus(b: Bus, at: Offset, t: Float, showNeed: Boolean) {
         val bounce = if (b.bounceT >= 0f) 1f + 0.06f * sin(b.bounceT * PI.toFloat()) else 1f
         val shake = if (b.shakeT >= 0f) sin(b.shakeT * 38f) * 5f * (1f - b.shakeT) else 0f
-        val roof = vehicleSprite(art, VehicleType.BUS, b.color, at, b.heading + shake, bounce)
+        // Heading changes every frame while driving to a stop, turning away or shaking: draw it live.
+        val turning = b.state == BState.DRIVING || b.state == BState.DEPARTING || b.shakeT >= 0f
+        val roof = vehicleSprite(art, VehicleType.BUS, b.color, at, b.heading + shake, bounce, live = turning)
         if (!showNeed) return
         val left = if (b.state == BState.LANE) b.cap - b.filled else b.cap - b.filled
         val c = at - Offset(0f, roof)

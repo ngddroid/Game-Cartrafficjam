@@ -65,6 +65,14 @@ class AudioManager(private val context: Context) {
     private val ids = HashMap<Sfx, Int>()
     private val lastPlayed = HashMap<Sfx, Long>()
 
+    /**
+     * SoundPool.play can block for tens of milliseconds while it steals a busy stream, which
+     * stalled game frames when many trucks were scooping at once. Sounds start on this thread.
+     */
+    private val sfxHandler = android.os.Handler(
+        android.os.HandlerThread("sfx", android.os.Process.THREAD_PRIORITY_AUDIO).apply { start() }.looper,
+    )
+
     init {
         Sfx.entries.forEach { ids[it] = pool.load(context, it.res, 1) }
     }
@@ -76,7 +84,9 @@ class AudioManager(private val context: Context) {
         if (now - (lastPlayed[sfx] ?: 0) < 30) return
         lastPlayed[sfx] = now
         val v = (sfx.volume * volume).coerceIn(0f, 1f)
-        ids[sfx]?.let { pool.play(it, v, v, 1, 0, rate.coerceIn(0.5f, 2f)) }
+        val id = ids[sfx] ?: return
+        val r = rate.coerceIn(0.5f, 2f)
+        sfxHandler.post { pool.play(id, v, v, 1, 0, r) }
     }
 
     // --- Music ------------------------------------------------------------------------------
@@ -133,6 +143,11 @@ class AudioManager(private val context: Context) {
     fun haptic(h: Haptic) {
         if (!vibrationOn) return
         val v = vibrator ?: return
+        // A binder call to the vibrator service: keep it off the frame thread like the sounds.
+        sfxHandler.post { vibrateNow(v, h) }
+    }
+
+    private fun vibrateNow(v: android.os.Vibrator, h: Haptic) {
         if (!v.hasVibrator()) return
         if (Build.VERSION.SDK_INT >= 26) {
             val effect = when (h) {

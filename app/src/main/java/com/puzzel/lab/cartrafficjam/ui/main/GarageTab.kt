@@ -34,18 +34,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -76,6 +72,12 @@ import com.puzzel.lab.cartrafficjam.ui.components.OutlinedText
 import com.puzzel.lab.cartrafficjam.ui.components.VehicleSprite
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
+import com.puzzel.lab.cartrafficjam.ui.theme.LocalTabPalette
+import com.puzzel.lab.cartrafficjam.ui.components.toyCard
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 
 /** Accent used for each pack's card so the grid reads as distinct collections. */
 private fun Skin.accent() = when (this) {
@@ -106,6 +108,7 @@ private fun Skin.previewColor() = when (this) {
 
 @Composable
 fun GarageTab(player: PlayerState) {
+    val pal = LocalTabPalette.current
     val container = App.container
     val progress = container.progress
     val audio = LocalAudio.current
@@ -119,12 +122,12 @@ fun GarageTab(player: PlayerState) {
         GridCells.Fixed(2),
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item(span = { GridItemSpan(2) }) {
             Column {
-                TabHeader("Garage", "${player.ownedSkins.size} of ${Skin.entries.size} paint packs owned")
+                GarageHeader(owned = player.ownedSkins.size, total = Skin.entries.size)
                 Showroom(preview, type, color, player.coins)
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -132,34 +135,12 @@ fun GarageTab(player: PlayerState) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     VehicleType.entries.forEach { t ->
-                        val sel = t == type
-                        Text(
-                            t.name.lowercase().replaceFirstChar { it.uppercase() },
-                            style = GameText.Label.copy(fontFamily = TitleFont, fontSize = 15.sp, color = if (sel) Color.White else Color(0xFF1A3A6B)),
-                            modifier = Modifier
-                                .background(if (sel) Color(0xFFFF8A1F) else Color.White, RoundedCornerShape(14.dp))
-                                .border(2.dp, if (sel) Color(0xFFB34700) else Color(0xFFBFD3EE), RoundedCornerShape(14.dp))
-                                .clickable { audio.play(Sfx.Click); type = t }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        )
+                        TypePill(t.name.lowercase().replaceFirstChar { it.uppercase() }, t == type) { audio.play(Sfx.Click); type = t }
                     }
                     Spacer(Modifier.weight(1f))
                 }
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    JamColor.entries.forEach { c ->
-                        val sel = c.ordinal == color
-                        Box(
-                            Modifier
-                                .size(if (sel) 34.dp else 28.dp)
-                                .clip(CircleShape)
-                                .background(Brush.verticalGradient(listOf(Color(c.hex).tint(0.3f), Color(c.hex))))
-                                .border(if (sel) 3.dp else 2.dp, if (sel) Color.White else Color(0x55000000), CircleShape)
-                                .clickable { audio.play(Sfx.Click); color = c.ordinal },
-                        )
-                    }
+                Box(Modifier.padding(horizontal = 12.dp)) {
+                    ColorBar(color) { audio.play(Sfx.Click); color = it }
                 }
                 Spacer(Modifier.height(12.dp))
                 SkinActions(preview, equipped, player, onBuy = {
@@ -174,11 +155,7 @@ fun GarageTab(player: PlayerState) {
                     progress.selectSkin(preview.id)
                 })
                 Spacer(Modifier.height(10.dp))
-                Text(
-                    "PAINT PACKS",
-                    style = GameText.Label.copy(color = Color.White, fontFamily = TitleFont, fontSize = 18.sp),
-                    modifier = Modifier.padding(start = 16.dp),
-                )
+                PaintPacksBanner()
             }
         }
         items(Skin.entries, key = { it.id }) { skin ->
@@ -200,8 +177,9 @@ fun GarageTab(player: PlayerState) {
 
 @Composable
 private fun Showroom(skin: Skin, type: VehicleType, color: Int, coins: Int) {
+    val pal = LocalTabPalette.current
     val density = LocalDensity.current
-    val unitPx = with(density) { (if (type == VehicleType.BUS) 27.dp else 33.dp).toPx() }
+    val unitPx = with(density) { (if (type == VehicleType.BUS) 21.dp else 26.dp).toPx() }
     val art = remember(skin, unitPx) { VehicleArt(unitPx, skin) }
     val spin = rememberInfiniteTransition(label = "turntable")
     val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "a")
@@ -215,36 +193,18 @@ private fun Showroom(skin: Skin, type: VehicleType, color: Int, coins: Int) {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(250.dp)
-            .background(Brush.verticalGradient(listOf(accent.shade(0.45f), Color(0xFF1B2440), Color(0xFF111827)))),
+            .height(210.dp),
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            // Spotlights
-            for (k in listOf(0.18f, 0.82f)) {
-                val p = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * k - 10f, 0f); lineTo(w * k + 10f, 0f); lineTo(w * 0.5f + (w * k - w * 0.5f) * 0.1f + 120f, h * 0.8f); lineTo(w * 0.5f + (w * k - w * 0.5f) * 0.1f - 120f, h * 0.8f); close()
-                }
-                drawPath(p, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f * glow), Color.Transparent), 0f, h * 0.8f))
-            }
-            // Back wall stripes
-            for (k in 0 until 8) drawRect(Color.White.copy(alpha = 0.03f), Offset(k * w / 8f, 0f), Size(w / 16f, h * 0.55f))
-            // Floor
-            drawRect(Brush.verticalGradient(listOf(Color(0xFF2B3550), Color(0xFF151B2E)), h * 0.55f, h), Offset(0f, h * 0.55f), Size(w, h * 0.45f))
-            // Turntable
-            val c = Offset(w / 2, h * 0.72f)
-            val rx = w * 0.4f
-            val ry = h * 0.17f
-            drawOval(Color.Black.copy(alpha = 0.45f), Offset(c.x - rx, c.y - ry + 12f), Size(rx * 2, ry * 2))
-            drawOval(Color(0xFF3C4766), Offset(c.x - rx, c.y - ry + 8f), Size(rx * 2, ry * 2))
-            drawOval(Brush.verticalGradient(listOf(Color(0xFF7D8BB0), Color(0xFF4A5677)), c.y - ry, c.y + ry), Offset(c.x - rx, c.y - ry), Size(rx * 2, ry * 2))
-            drawOval(accent.copy(alpha = 0.55f + 0.3f * glow), Offset(c.x - rx, c.y - ry), Size(rx * 2, ry * 2), style = Stroke(4f))
-            for (k in 0 until 16) {
-                val a = Math.toRadians(k * 22.5 + angle)
-                val p = Offset(c.x + (rx * 0.92f * kotlin.math.cos(a)).toFloat(), c.y + (ry * 0.92f * kotlin.math.sin(a)).toFloat())
-                drawCircle(if (k % 2 == 0) Color(0xFFFFF59D) else accent.tint(0.4f), 3.5f, p)
-            }
+            // Garage interior: walls, shutter door, lamps, tool chest, tyres, plant, tiled floor.
+            drawGarageInterior(glow)
+            // Neon turntable with yellow lights.
+            val c = Offset(w / 2, h * 0.7f)
+            val rx = w * 0.36f
+            val ry = h * 0.16f
+            drawTurntable(c, rx, ry, angle, glow)
             // Vehicle
             withTransform({ scale(pop.value, pop.value, c) }) {
                 val shadow = art.shadow(type)
@@ -256,9 +216,8 @@ private fun Showroom(skin: Skin, type: VehicleType, color: Int, coins: Int) {
                 art.drawLive(this, type, color, angle, c)
             }
         }
-        Column(Modifier.padding(14.dp)) {
-            OutlinedText(skin.title, style = GameText.Title, fontSize = 26.sp, strokeWidth = 7f, outline = Color(0xFF0D1530), textAlign = TextAlign.Start)
-            Text(skin.tagline, style = GameText.Small.copy(color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp))
+        Column(Modifier.padding(start = 10.dp, top = 8.dp)) {
+            LaurelTitle(skin.title, skin.tagline)
         }
         CoinPill(coins, Modifier.align(Alignment.TopEnd).padding(10.dp))
     }
@@ -273,18 +232,7 @@ private fun SkinActions(skin: Skin, equipped: Skin, player: PlayerState, onBuy: 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         when {
-            skin == equipped -> Row(
-                Modifier
-                    .weight(1f)
-                    .height(56.dp)
-                    .background(Color(0xFFE8F5E9), RoundedCornerShape(28.dp))
-                    .border(3.dp, Color(0xFF43A047), RoundedCornerShape(28.dp)),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GameIcon(Icon.CHECK, 28.dp)
-                Text("  Equipped on all vehicles", style = GameText.Label.copy(color = Color(0xFF2E7D32), fontSize = 16.sp))
-            }
+            skin == equipped -> EquippedBadge(Modifier.weight(1f).padding(horizontal = 14.dp))
             owned -> GameButton("Equip", onEquip, Modifier.weight(1f), color = ButtonColor.BLUE, height = 58.dp)
             else -> {
                 GameButton(
@@ -302,58 +250,65 @@ private fun PackCard(skin: Skin, owned: Boolean, equipped: Boolean, previewing: 
     val accent = skin.accent()
     val t = rememberInfiniteTransition(label = "card")
     val bob by t.animateFloat(-2f, 2f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "bob")
+    // Gold frame with a glow for the pack being previewed, a white frame for the others.
+    val frameTop = if (previewing) Color(0xFFFFE680) else Color.White
+    val frameBottom = if (previewing) Color(0xFFFFB300) else Color(0xFFEDE4FF)
+    val ink = if (previewing) Color(0xFFB86E00) else Color(0xFF5A3FB8)
     Column(
         Modifier
             .scale(if (previewing) 1.03f else 1f)
             .drawBehind {
-                val r = CornerRadius(20.dp.toPx())
-                drawRoundRect(Color(0xFF0D2C6B), Offset(0f, 5.dp.toPx()), size, r)
-                drawRoundRect(if (previewing) Color(0xFFFFD54F) else Color.White, Offset.Zero, size, r)
+                val r = CornerRadius(22.dp.toPx())
+                if (previewing) {
+                    drawRoundRect(Color(0xFFFFD54F).copy(alpha = 0.45f), Offset(-6.dp.toPx(), -6.dp.toPx()), Size(size.width + 12.dp.toPx(), size.height + 12.dp.toPx()), CornerRadius(r.x + 6.dp.toPx()))
+                }
+                drawRoundRect(Color.Black.copy(alpha = 0.25f), Offset(0f, 6.dp.toPx()), size, r)
+                drawRoundRect(ink, Offset(-2.dp.toPx(), -2.dp.toPx()), Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx()), CornerRadius(r.x + 2.dp.toPx()))
+                drawRoundRect(Brush.verticalGradient(listOf(frameTop, frameBottom)), Offset.Zero, size, r)
             }
-            .padding(4.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .padding(5.dp)
+            .clip(RoundedCornerShape(17.dp))
             .clickable(onClick = onClick),
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(116.dp)
-                .background(Brush.verticalGradient(listOf(accent.tint(0.45f), accent.tint(0.15f)))),
+                .height(120.dp),
             contentAlignment = Alignment.Center,
         ) {
             Canvas(Modifier.fillMaxSize()) {
+                drawSunburst(accent)
                 drawOval(Color.White.copy(alpha = 0.35f), Offset(size.width * 0.12f, size.height * 0.55f), Size(size.width * 0.76f, size.height * 0.36f))
             }
             Row(Modifier.offset(y = bob.dp), verticalAlignment = Alignment.CenterVertically) {
-                VehicleSprite(VehicleType.VAN, (skin.previewColor() + 3) % 8, skin, 12.dp, rotation = 60f, modifier = Modifier.offset(x = 14.dp, y = (-6).dp))
-                VehicleSprite(VehicleType.CAR, skin.previewColor(), skin, 16.dp, rotation = 60f, modifier = Modifier.offset(x = (-26).dp, y = 8.dp))
+                VehicleSprite(VehicleType.VAN, (skin.previewColor() + 3) % 8, skin, 13.dp, rotation = 60f, modifier = Modifier.offset(x = 14.dp, y = (-6).dp))
+                VehicleSprite(VehicleType.CAR, skin.previewColor(), skin, 17.dp, rotation = 60f, modifier = Modifier.offset(x = (-26).dp, y = 8.dp))
             }
             if (equipped) {
-                Text(
-                    "IN USE",
-                    style = GameText.Small.copy(color = Color.White, fontFamily = TitleFont, fontSize = 11.sp),
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color(0xFF43A047), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
-                )
+                Box(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(7.dp)
+                        .drawBehind {
+                            val r = CornerRadius(size.height / 2)
+                            drawRoundRect(Color(0xFF1B5E20), Offset(0f, 2.dp.toPx()), size, r)
+                            drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF6FD06A), Color(0xFF2E9E3A))), Offset.Zero, size, r)
+                        }
+                        .padding(horizontal = 9.dp, vertical = 2.dp),
+                ) {
+                    OutlinedText("IN USE", style = GameText.Button, fontSize = 13.sp, strokeWidth = 5f, outline = Color(0xFF1B5E20), depth = 0f)
+                }
             }
         }
-        Column(Modifier.fillMaxWidth().background(Color(0xFFFFF8E7)).padding(horizontal = 10.dp, vertical = 8.dp)) {
-            Text(skin.title, style = GameText.Label.copy(fontFamily = TitleFont, fontSize = 16.sp, color = Color(0xFF3E2723)), maxLines = 1)
-            Spacer(Modifier.height(2.dp))
-            if (owned) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GameIcon(Icon.CHECK, 16.dp)
-                    Text(" Owned", style = GameText.Small.copy(color = Color(0xFF2E7D32)))
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GameIcon(Icon.COIN, 16.dp)
-                    Text(" ${skin.price}", style = GameText.Small.copy(color = Color(0xFF8A4B14), fontFamily = TitleFont))
-                    Spacer(Modifier.width(6.dp))
-                    Text("or", style = GameText.Small.copy(color = Color(0xFF8A4B14)))
-                    Spacer(Modifier.width(4.dp))
-                    GameIcon(Icon.AD, 16.dp)
-                }
-            }
+        // Cream name strip.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(Color(0xFFFFFBF0), Color(0xFFFFEFD2))))
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(skin.title, style = GameText.Label.copy(fontFamily = TitleFont, fontSize = 19.sp, color = Color(0xFF3B1E6E)), maxLines = 1)
         }
     }
 }

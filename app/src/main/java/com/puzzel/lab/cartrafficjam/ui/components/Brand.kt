@@ -38,6 +38,7 @@ import com.puzzel.lab.cartrafficjam.game.model.VehicleType
 import com.puzzel.lab.cartrafficjam.game.render.Skin
 import com.puzzel.lab.cartrafficjam.game.render.VehicleArt
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 /** "TRAFFIC JAM RUSH" stacked logo with a gentle idle wobble. */
 @Composable
@@ -120,9 +121,9 @@ fun AvatarTile(size: Dp, modifier: Modifier = Modifier) {
             .size(size)
             .drawBehind {
                 val r = CornerRadius(14.dp.toPx())
-                drawRoundRect(Color(0xFF0D47A1), Offset(0f, 3.dp.toPx()), this.size, r)
+                drawRoundRect(Sunset.Outline, Offset(0f, 3.dp.toPx()), this.size, r)
                 drawRoundRect(Color.White, Offset.Zero, this.size, r)
-                drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF81D4FA), Color(0xFF29B6F6))), Offset(3.dp.toPx(), 3.dp.toPx()), Size(this.size.width - 6.dp.toPx(), this.size.height - 6.dp.toPx()), CornerRadius(11.dp.toPx()))
+                drawRoundRect(Brush.verticalGradient(listOf(Color(0xFFFFD3A5), Color(0xFFFF9A62))), Offset(3.dp.toPx(), 3.dp.toPx()), Size(this.size.width - 6.dp.toPx(), this.size.height - 6.dp.toPx()), CornerRadius(11.dp.toPx()))
             },
         contentAlignment = Alignment.Center,
     ) { Mascot(size * 0.84f) }

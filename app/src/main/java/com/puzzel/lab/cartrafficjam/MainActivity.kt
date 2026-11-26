@@ -29,6 +29,7 @@ import com.puzzel.lab.cartrafficjam.ui.game.GameScreen
 import com.puzzel.lab.cartrafficjam.ui.game.ModeGameScreen
 import com.puzzel.lab.cartrafficjam.ui.intro.StudioIntroScreen
 import com.puzzel.lab.cartrafficjam.ui.main.MainScreen
+import com.puzzel.lab.cartrafficjam.ui.main.Tab
 import com.puzzel.lab.cartrafficjam.ui.onboarding.OnboardingScreen
 import com.puzzel.lab.cartrafficjam.ui.splash.SplashScreen
 import com.puzzel.lab.cartrafficjam.ui.theme.CarTrafficJamTheme
@@ -41,6 +42,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hideNavigationBar()
         val container = App.container
+        if (BuildConfig.DEBUG) {
+            com.puzzel.lab.cartrafficjam.game.modes.DebugFlags.autoplay = intent.getBooleanExtra("debug_autoplay", false)
+            com.puzzel.lab.cartrafficjam.game.modes.DebugFlags.perf = intent.getBooleanExtra("debug_perf", false)
+        }
         setContent {
             CarTrafficJamTheme {
                 CompositionLocalProvider(LocalAudio provides container.audio) {
@@ -48,6 +53,8 @@ class MainActivity : ComponentActivity() {
                         AppNavHost(
                             debugLevel = if (BuildConfig.DEBUG) intent.getIntExtra("debug_level", 0) else 0,
                             debugMode = if (BuildConfig.DEBUG) intent.getStringExtra("debug_mode") else null,
+                            // Debug builds can open a main tab directly: --es debug_tab GARAGE
+                            debugTab = if (BuildConfig.DEBUG) intent.getStringExtra("debug_tab") else null,
                         )
                         AdOverlay(container.ads)
                     }
@@ -72,20 +79,20 @@ class MainActivity : ComponentActivity() {
 }
 
 @androidx.compose.runtime.Composable
-private fun AppNavHost(debugLevel: Int, debugMode: String? = null) {
+private fun AppNavHost(debugLevel: Int, debugMode: String? = null, debugTab: String? = null) {
     val nav = rememberNavController()
     // Debug builds can jump straight into a level: adb shell am start ... --ei debug_level N
     androidx.compose.runtime.LaunchedEffect(debugLevel) {
         if (debugLevel > 0) {
             kotlinx.coroutines.delay(300)
-            nav.navigate("main") { popUpTo(nav.graph.id) { inclusive = true } }
             if (debugMode != null) nav.navigate("mode/$debugMode/$debugLevel") else nav.navigate("game/$debugLevel")
         }
     }
     NavHost(
         nav,
         // The NG Studio ident plays first on every launch, then the game's own splash.
-        startDestination = "intro",
+        // Debug jumps skip the ident and splash so nothing navigates over the level.
+        startDestination = if (debugLevel > 0) "main" else "intro",
         enterTransition = { fadeIn(tween(260)) + scaleIn(tween(260), initialScale = 0.96f) },
         exitTransition = { fadeOut(tween(200)) },
         popEnterTransition = { fadeIn(tween(260)) },
@@ -112,6 +119,7 @@ private fun AppNavHost(debugLevel: Int, debugMode: String? = null) {
         }
         composable("main") {
             MainScreen(
+                initialTab = debugTab?.let { name -> Tab.entries.firstOrNull { it.name == name } } ?: Tab.HOME,
                 onPlay = { level -> nav.navigate("game/$level") { launchSingleTop = true } },
                 onPlayMode = { mode, level -> nav.navigate("mode/${mode.name}/$level") { launchSingleTop = true } },
                 onOpenDoc = { doc -> nav.navigate("web/$doc") },

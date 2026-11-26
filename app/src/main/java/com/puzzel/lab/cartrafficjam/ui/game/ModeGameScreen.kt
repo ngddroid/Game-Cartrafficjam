@@ -76,6 +76,7 @@ import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
 /** Plays a Pixel Crowd or Sand Sweep level. Crowd Loop runs on the classic [GameScreen]. */
 @Composable
@@ -217,7 +218,7 @@ private fun ModeSession(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 18.dp, vertical = 18.dp)
-                    .background(Color(0xCC0D2C6B), RoundedCornerShape(16.dp))
+                    .background(Sunset.Outline.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {

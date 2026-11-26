@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.puzzel.lab.cartrafficjam.game.render.shade
@@ -23,8 +24,9 @@ import com.puzzel.lab.cartrafficjam.game.render.tint
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import com.puzzel.lab.cartrafficjam.ui.theme.Sunset
 
-enum class Icon { COIN, STAR, STAR_EMPTY, LOCK, HOME, MAP, COLLECTION, MODES, GARAGE, GEAR, SHUFFLE, CRANE, SORT, AD, GIFT, PLAY, TROPHY, HAND, CHECK, HEART, SAD }
+enum class Icon { COIN, STAR, STAR_EMPTY, LOCK, HOME, MAP, COLLECTION, MODES, GARAGE, GEAR, SHUFFLE, CRANE, SORT, AD, GIFT, PLAY, TROPHY, HAND, CHECK, HEART, SAD, GAMEPAD }
 
 /** Chunky, colourful icons drawn in a 100×100 design space. */
 @Composable
@@ -32,6 +34,13 @@ fun GameIcon(icon: Icon, size: Dp, modifier: Modifier = Modifier) {
     Canvas(modifier.size(size)) {
         val s = this.size.minDimension / 100f
         scale(s, s, Offset.Zero) { draw(icon) }
+    }
+}
+
+/** Draws [icon] into a canvas at [topLeft], [sizePx] wide (for icons inside illustrations). */
+fun DrawScope.drawGameIcon(icon: Icon, topLeft: Offset, sizePx: Float) {
+    translate(topLeft.x, topLeft.y) {
+        scale(sizePx / 100f, sizePx / 100f, Offset.Zero) { draw(icon) }
     }
 }
 
@@ -61,6 +70,7 @@ private fun DrawScope.draw(icon: Icon) {
         Icon.HAND -> hand()
         Icon.HEART -> heart()
         Icon.SAD -> sad()
+        Icon.GAMEPAD -> gamepad()
         Icon.CHECK -> {
             val p = Path().apply { moveTo(18f, 52f); lineTo(42f, 76f); lineTo(84f, 26f) }
             drawPath(p, Color(0xFF1B5E20), style = Stroke(20f, cap = StrokeCap.Round, join = StrokeJoin.Round))
@@ -146,11 +156,11 @@ private fun DrawScope.modes() {
         Offset(12f, 52f) to Color(0xFFE0409A), Offset(52f, 52f) to Color(0xFFE6A100),
     )
     for ((o, c) in tiles) {
-        drawRoundRect(Color(0xFF0D2C6B), o + Offset(0f, 4f), Size(36f, 36f), CornerRadius(10f))
+        drawRoundRect(Sunset.Outline, o + Offset(0f, 4f), Size(36f, 36f), CornerRadius(10f))
         drawRoundRect(c, o, Size(36f, 36f), CornerRadius(10f))
         drawRoundRect(Color.White.copy(alpha = 0.35f), o + Offset(5f, 4f), Size(26f, 9f), CornerRadius(4f))
     }
-    drawCircle(Color(0xFF0D2C6B), 19f, Offset(50f, 52f))
+    drawCircle(Sunset.Outline, 19f, Offset(50f, 52f))
     drawCircle(Color.White, 16f, Offset(50f, 50f))
     val p = Path().apply { moveTo(45f, 41f); lineTo(59f, 50f); lineTo(45f, 59f); close() }
     drawPath(p, Color(0xFF5FC12F))
@@ -197,12 +207,12 @@ private fun DrawScope.gear() {
     val c = Offset(50f, 50f)
     for (i in 0 until 8) {
         rotate(i * 45f, c) {
-            drawRoundRect(Color(0xFF1565C0), Offset(42f, 6f), Size(16f, 20f), CornerRadius(4f))
+            drawRoundRect(Color(0xFFD98A00), Offset(42f, 6f), Size(16f, 20f), CornerRadius(4f))
         }
     }
-    drawCircle(Color(0xFF1565C0), 36f, c)
-    drawCircle(Brush.radialGradient(listOf(Color(0xFF90CAF9), Color(0xFF42A5F5)), Offset(40f, 40f), 50f), 31f, c)
-    drawCircle(Color(0xFF1565C0), 13f, c)
+    drawCircle(Color(0xFFD98A00), 36f, c)
+    drawCircle(Brush.radialGradient(listOf(Color(0xFFFFEB8A), Color(0xFFFFC21A)), Offset(40f, 40f), 50f), 31f, c)
+    drawCircle(Color(0xFFD98A00), 13f, c)
     drawCircle(Color.White, 9f, c)
 }
 
@@ -336,4 +346,30 @@ private fun DrawScope.sad() {
     drawOval(Color(0xFFE57373), Offset(40f, 68f), Size(20f, 12f))
     drawOval(Color(0xFF4FC3F7), Offset(10f, 44f), Size(10f, 16f))
     drawOval(Color(0xFF4FC3F7), Offset(80f, 44f), Size(10f, 16f))
+}
+
+/** White game controller with colored buttons and a purple outline (the Modes tab). */
+private fun DrawScope.gamepad() {
+    val ink = Color(0xFF3B2A8C)
+    val body = Path().apply {
+        moveTo(26f, 30f)
+        cubicTo(36f, 25f, 64f, 25f, 74f, 30f)
+        cubicTo(90f, 36f, 98f, 70f, 88f, 78f)
+        cubicTo(80f, 85f, 70f, 74f, 63f, 66f)
+        lineTo(37f, 66f)
+        cubicTo(30f, 74f, 20f, 85f, 12f, 78f)
+        cubicTo(2f, 70f, 10f, 36f, 26f, 30f)
+        close()
+    }
+    drawPath(body, ink, style = Stroke(9f, join = StrokeJoin.Round))
+    drawPath(body, Brush.verticalGradient(listOf(Color.White, Color(0xFFE4DEFF)), 25f, 85f))
+    drawOval(Color.White.copy(alpha = 0.9f), Offset(28f, 31f), Size(30f, 8f))
+    // D-pad
+    drawRoundRect(ink, Offset(22f, 47f), Size(20f, 7f), CornerRadius(2f))
+    drawRoundRect(ink, Offset(28.5f, 40.5f), Size(7f, 20f), CornerRadius(2f))
+    // Buttons
+    drawCircle(Color(0xFFFF4D6D), 5f, Offset(70f, 43f))
+    drawCircle(Color(0xFF2F9BFF), 5f, Offset(62f, 51f))
+    drawCircle(Color(0xFFFFC21A), 5f, Offset(78f, 51f))
+    drawCircle(Color(0xFF3DBE4B), 5f, Offset(70f, 59f))
 }

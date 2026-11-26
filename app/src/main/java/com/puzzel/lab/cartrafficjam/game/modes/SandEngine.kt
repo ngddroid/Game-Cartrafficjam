@@ -15,7 +15,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -77,9 +79,11 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         val f = 0.66f + (i % 8) * 0.06f
         (if (f > 1f) c.tint((f - 1f) * 1.8f) else c.shade(f)).toArgb()
     }
-    private val emptyArgb = Color(0xFFB8C2D3).toArgb()
+    private val emptyArgb = EMPTY.toArgb()
     private var sandMoving = false
     private var sweep = false
+    /** True when grains changed since the sand bitmap was last refreshed. */
+    private var sandDirty = true
 
     override val counter: Int get() = if (left == 0) 0 else max(1, ceil(left * 100f / total).toInt())
     override val counterLabel = "% Sand"
@@ -126,7 +130,8 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         val full get() = eaten >= cap
     }
 
-    private class Flyer(val color: Int, val from: Offset, val truck: Truck) {
+    /** A grain pouring from the bottom of the picture into a van's bay. */
+    private class Flyer(val color: Int, val light: Boolean, val from: Offset, val truck: Truck, val dx: Float, val dur: Float) {
         var t = 0f
     }
 
@@ -163,6 +168,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     private var pill = Rect.Zero
     private var plus = Rect.Zero
     private lateinit var art: VehicleArt
+    private lateinit var vans: SandVan
+    /** Lot trucks from back to front, so nearer ones overlap farther ones. */
+    private var lotOrder: List<Truck> = emptyList()
     private var scene: ImageBitmap? = null
 
     private fun boardToScreen(gx: Float, gy: Float) =
@@ -195,6 +203,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         boardCenter = lotRect.center
         art = VehicleArt(unit, skin)
         beltScale = min(1f, (34 * u) / (unit * 2))
+        vans = SandVan(art.bodyW() * beltScale)
+        pourPaint.strokeWidth = grain * 1.3f
+        pillFace = Brush.verticalGradient(listOf(Color(0xFF2A3F78), Color(0xFF17264F)), pill.top, pill.bottom)
         scene = renderBitmap(width.toInt(), height.toInt()) { paintScene() }
         trucks.forEachIndexed { i, v ->
             v.home = boardToScreen(v.spec.centerX, v.spec.centerY)
@@ -204,8 +215,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             }
             v.popDelay = 0.15f + i * min(0.03f, 0.8f / trucks.size)
             art.composite(v.type, v.color, false, v.heading)
-            art.composite(v.type, v.color, false, 90f)
+            vans.look(v.type, v.color, length(v))
         }
+        lotOrder = trucks.sortedBy { it.home.y }
     }
 
     // --- Input --------------------------------------------------------------------------------
@@ -356,12 +368,30 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     private var popIndex = 0
 
     override fun step(dt: Float) {
+        val t0 = if (DebugFlags.perf) System.nanoTime() else 0L
+        if (DebugFlags.autoplay) autoplay(dt)
         settle()
         settle()
+        val t1 = if (DebugFlags.perf) System.nanoTime() else 0L
         updateTrucks(dt)
         updateFlyers(dt)
         checkEnd(dt)
+        if (DebugFlags.perf) perf.step(t1 - t0, System.nanoTime() - t1)
     }
+
+    private var autoClock = 0f
+
+    /** Debug only: sends a free truck to the belt every so often while there is room. */
+    private fun autoplay(dt: Float) {
+        autoClock += dt
+        if (autoClock < 0.3f || phase != ModePhase.PLAYING || !ready) return
+        autoClock = 0f
+        if (onBelt >= capacity) return
+        val v = trucks.firstOrNull { it.state == TState.LOT && it.popT >= 1f && grid.blockDistance(it.spec) < 0 } ?: return
+        drive(v)
+    }
+
+    private val perf = PerfLog("SandPerf")
 
     /** One pass of falling sand: straight down if free, else slide diagonally. */
     private fun settle() {
@@ -395,6 +425,7 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             }
         }
         sandMoving = moved
+        if (moved) sandDirty = true
     }
 
     /** Bottom grain of [color] within suction reach in column [x], or -1. */
@@ -437,6 +468,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
                         v.state = TState.WAITING
                         v.scale = beltScale
                         v.seq = seqCounter++
+                        // From here on it is drawn as the side-on van: hide the swap in a hop and a puff.
+                        v.bounceT = 0f
+                        particles.smoke(v.pos, count = 3)
                     }
                 }
                 TState.WAITING -> {
@@ -448,6 +482,7 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
                     val stepLen = 160 * u * dt
                     v.pos = if (dist <= stepLen) target else v.pos + d / dist * stepLen
                     v.heading += ModeDraw.shortestAngle(v.heading, 90f) * min(1f, dt * 9f)
+                    if (abs(ModeDraw.shortestAngle(v.heading, 90f)) < 0.5f) v.heading = 90f
                     val merging = trucks.any { it.state == TState.MERGING }
                     val settled = abs(ModeDraw.shortestAngle(v.heading, 90f)) < 4f
                     if (rank == 0 && dist < 1f && settled && !merging && gapAt(mergeEnd.x + margin, v, BELT_SPEED * u * MERGE_TIME)) {
@@ -564,12 +599,18 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             }
             if (best < 0) break
             grains[best] = -1
+            sandDirty = true
             left--
             v.eaten++
             v.eatBudget -= 1f
             ate = true
-            if (flyers.size < 220 && rnd.nextFloat() < 0.18f) {
-                flyers += Flyer(v.color, Offset(picLeft + (best % GW + 0.5f) * grain, picTop + (best / GW + 0.5f) * grain), v)
+            if (flyers.size < MAX_FLYERS && rnd.nextFloat() < 0.45f) {
+                val look = vans.look(v.type, v.color, length(v))
+                flyers += Flyer(
+                    v.color, rnd.nextBoolean(),
+                    Offset(picLeft + (best % GW + 0.5f) * grain, picTop + (best / GW + 0.5f) * grain), v,
+                    (rnd.nextFloat() - 0.5f) * look.bay.width * 0.5f, 0.24f + rnd.nextFloat() * 0.12f,
+                )
             }
         }
         if (!ate) v.eatBudget = min(v.eatBudget, 1f)
@@ -592,7 +633,7 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         val it = flyers.iterator()
         while (it.hasNext()) {
             val f = it.next()
-            f.t += dt / 0.22f
+            f.t += dt / f.dur
             if (f.t >= 1f) it.remove()
         }
     }
@@ -618,13 +659,20 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
 
     // --- Drawing ------------------------------------------------------------------------------
 
-    override fun draw(scope: DrawScope, t: Float) = with(scope) {
+    override fun draw(scope: DrawScope, t: Float) {
+        val t0 = if (DebugFlags.perf) System.nanoTime() else 0L
+        drawFrame(scope)
+        if (DebugFlags.perf) perf.draw(System.nanoTime() - t0, onBelt)
+    }
+
+    private fun drawFrame(scope: DrawScope) = with(scope) {
         val bg = scene ?: return@with
-        for (i in grains.indices) {
-            val g = grains[i]
-            pixels[i] = if (g < 0) emptyArgb else palette[g]
+        // Only recolor and re-upload the sand picture when grains actually moved or were scooped.
+        if (sandDirty) {
+            recolor()
+            bitmap.setPixels(pixels, 0, GW, 0, 0, GW, GH)
+            sandDirty = false
         }
-        bitmap.setPixels(pixels, 0, GW, 0, 0, GW, GH)
         translate(screenShake.x, screenShake.y) {
             drawImage(bg)
             drawImage(
@@ -635,24 +683,17 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             drawBelt()
             drawPill()
 
-            for (f in flyers) {
-                val p = f.t.coerceIn(0f, 1f)
-                val to = f.truck.pos - Offset(0f, 6 * u)
-                val pos = f.from + (to - f.from) * p
-                val sz = grain * (1.6f - p * 0.8f)
-                drawRect(jamColor(f.color).tint(0.15f), Offset(pos.x - sz / 2, pos.y - sz / 2), Size(sz, sz))
-            }
-
-            val onBeltNow = trucks.filter { it.state == TState.BELT }.sortedBy { it.pos.x }
-            for (v in onBeltNow) truck(v)
-            for (v in onBeltNow) fillTag(v)
-            for (v in trucks.filter { it.state == TState.WAITING }) truck(v)
-            val lotTrucks = trucks.filter { it.state == TState.LOT }.sortedBy { it.pos.y }
-            for (v in lotTrucks) truck(v)
-            for (v in trucks.filter { it.state == TState.DRIVING || it.state == TState.MERGING }.sortedBy { it.pos.y }) truck(v)
-            for (v in trucks.filter { it.state == TState.LEAVING }) {
+            // Plain loops over the trucks: no per-frame lists or sorting.
+            for (v in trucks) if (v.state == TState.BELT) truck(v)
+            drawPour()
+            for (v in trucks) if (v.state == TState.BELT) fillTag(v)
+            for (v in trucks) if (v.state == TState.WAITING) truck(v)
+            for (v in lotOrder) if (v.state == TState.LOT) truck(v)
+            for (v in trucks) if (v.state == TState.DRIVING || v.state == TState.MERGING) truck(v)
+            for (v in trucks) {
+                if (v.state != TState.LEAVING) continue
                 // Speed lines streaming off the back.
-                val back = v.pos.x - art.bodyL(v.type) * v.scale / 2
+                val back = v.pos.x - length(v) / 2
                 val k = ((v.leaveV / u - BELT_SPEED) / 300f).coerceIn(0f, 1f)
                 for (j in -1..1) {
                     val y = v.pos.y + j * 6 * u
@@ -664,59 +705,88 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         }
     }
 
+    /** Grain colors into pixels; the top grain of every heap catches the light. */
+    private fun recolor() {
+        for (i in grains.indices) {
+            val g = grains[i]
+            pixels[i] = when {
+                g < 0 -> emptyArgb
+                i >= GW && grains[i - GW] < 0 -> palette[g or 7]
+                i >= GW * 2 && grains[i - GW * 2] < 0 -> palette[min(g + 2, g or 7)]
+                else -> palette[g]
+            }
+        }
+    }
+
+    private val pourPaint = android.graphics.Paint().apply { strokeCap = android.graphics.Paint.Cap.SQUARE }
+    private var pourPts = FloatArray(MAX_FLYERS * 2)
+
+    /** The streams of sand falling from the picture into the vans, one batched call per shade. */
+    private fun DrawScope.drawPour() {
+        if (flyers.isEmpty()) return
+        var mask = 0
+        for (f in flyers) mask = mask or (1 shl (f.color * 2 + if (f.light) 1 else 0))
+        drawIntoCanvas { canvas ->
+            val nc = canvas.nativeCanvas
+            for (key in 0 until 16) {
+                if (mask and (1 shl key) == 0) continue
+                val color = key / 2
+                val light = key % 2 == 1
+                var n = 0
+                for (f in flyers) {
+                    if (f.color != color || f.light != light) continue
+                    val v = f.truck
+                    val look = vans.look(v.type, v.color, length(v))
+                    val to = v.pos + vans.mouth(look) + Offset(f.dx, 0f)
+                    val p = f.t.coerceIn(0f, 1f)
+                    pourPts[n++] = f.from.x + (to.x - f.from.x) * p
+                    pourPts[n++] = f.from.y + (to.y - f.from.y) * p * p
+                }
+                val c = jamColor(color)
+                pourPaint.color = (if (light) c.tint(0.45f) else c.tint(0.12f)).toArgb()
+                nc.drawPoints(pourPts, 0, n, pourPaint)
+            }
+        }
+    }
+
     private fun DrawScope.truck(v: Truck) {
         val pop = if (v.popT >= 1f) 1f else ModeDraw.easeOutBack(v.popT)
         if (pop <= 0.01f) return
         val bounce = if (v.bounceT >= 0f) 1f + 0.07f * sin(v.bounceT * PI.toFloat()) else 1f
+        if (v.state == TState.WAITING || v.state == TState.MERGING || v.state == TState.BELT || v.state == TState.LEAVING) {
+            // On the road it is the side-on van with its open bay, like a real sand truck.
+            val look = vans.look(v.type, v.color, length(v))
+            val tilt = (ModeDraw.shortestAngle(90f, v.heading) * 0.45f).coerceIn(-16f, 16f)
+            val fill = v.eaten.toFloat() / v.cap
+            with(vans) { draw(look, v.pos, v.scale / beltScale * pop * bounce, tilt, fill) }
+            return
+        }
         val shake = if (v.shakeT >= 0f) sin(v.shakeT * 38f) * 6f * (1f - v.shakeT) else 0f
         val sc = v.scale * pop * bounce
-        val roof = vehicleSprite(art, v.type, v.color, v.pos, v.heading + shake, sc)
-        if (v.eaten > 0) cargo(v, v.pos - Offset(0f, roof), sc)
-    }
-
-    /** The sand a truck has scooped so far, heaped on its roof. */
-    private fun DrawScope.cargo(v: Truck, roof: Offset, sc: Float) {
-        val fill = (v.eaten.toFloat() / v.cap).coerceIn(0f, 1f)
-        val f = 0.35f + 0.65f * kotlin.math.sqrt(fill)
-        val w = art.bodyL(v.type) * sc * 0.62f * f
-        val h = art.bodyW() * sc * 0.62f * f
-        val col = jamColor(v.color)
-        val tl = Offset(roof.x - w / 2, roof.y - h / 2)
-        drawOval(col.shade(0.6f), tl + Offset(0f, h * 0.18f), Size(w, h))
-        drawOval(Brush.radialGradient(listOf(col.tint(0.35f), col, col.shade(0.82f)), roof - Offset(w * 0.15f, h * 0.25f), w * 0.6f), tl, Size(w, h))
-        val r = Random(v.spec.id)
-        repeat(7) {
-            val dx = (r.nextFloat() - 0.5f) * w * 0.7f
-            val dy = (r.nextFloat() - 0.5f) * h * 0.6f
-            drawCircle(col.shade(0.75f), 0.8f * u, roof + Offset(dx, dy))
-        }
+        // Heading changes every frame while driving out or shaking: draw it live.
+        val turning = v.state == TState.DRIVING || v.shakeT >= 0f
+        vehicleSprite(art, v.type, v.color, v.pos, v.heading + shake, sc, live = turning)
     }
 
     /**
-     * The belt is a light road in a navy tray. Its dashed center line and edge studs slide at
-     * exactly belt speed, so the trucks visibly ride on it.
+     * The belt is a light road in a navy tray. Its dashed center line slides at exactly belt
+     * speed, so the trucks visibly ride on it. Everything else about it is in the scene bitmap.
      */
     private fun DrawScope.drawBelt() {
-        val w = width
-        val speed = BELT_SPEED * u
         val dash = 22 * u
-        val off = (time * speed) % dash
+        val off = (time * BELT_SPEED * u) % dash
         var d = -dash + off
-        while (d < w) {
-            drawLine(Color.White.copy(alpha = 0.9f), Offset(d, beltY), Offset(d + dash * 0.5f, beltY), 2.4f * u, StrokeCap.Round)
+        val dashCol = Color.White.copy(alpha = 0.9f)
+        while (d < width) {
+            drawLine(dashCol, Offset(d, beltY), Offset(d + dash * 0.5f, beltY), 2.4f * u, StrokeCap.Round)
             d += dash
         }
-        val stud = 14 * u
-        val sOff = (time * speed) % stud
-        var x = -stud + sOff
-        while (x < w) {
-            drawCircle(Color(0xFF6C7686), 1.1f * u, Offset(x, beltTop + 4.5f * u))
-            drawCircle(Color(0xFF6C7686), 1.1f * u, Offset(x, beltBottom - 4.5f * u))
-            x += stud
-        }
-        // End brackets where the belt curls under.
+    }
+
+    /** End brackets where the belt curls under. */
+    private fun DrawScope.beltBrackets() {
         for (left in listOf(true, false)) {
-            val bx = if (left) 0f else w - 16 * u
+            val bx = if (left) 0f else width - 16 * u
             val r = Rect(bx, beltTop - 14 * u, bx + 16 * u, beltBottom + 14 * u)
             drawRoundRect(Color(0xFF1B2850), r.topLeft + Offset(0f, 3 * u), r.size, CornerRadius(8 * u))
             drawRoundRect(Brush.horizontalGradient(listOf(Color(0xFF3D5AA8), Color(0xFF26397A)), r.left, r.right), r.topLeft, r.size, CornerRadius(8 * u))
@@ -729,12 +799,14 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         label("$pct%", Offset(v.pos.x, beltBottom + 8 * u), 10.5f * u, Color.White, Color(0xFF1B2850), 3 * u)
     }
 
+    private var pillFace: Brush = Brush.verticalGradient(listOf(Color(0xFF2A3F78), Color(0xFF17264F)))
+
     private fun DrawScope.drawPill() {
         val r = pill
         val cr = CornerRadius(r.height / 2)
         drawRoundRect(Color(0xFF4FC3F7).copy(alpha = 0.35f), r.topLeft - Offset(3 * u, 3 * u), Size(r.width + 6 * u, r.height + 6 * u), CornerRadius(r.height / 2 + 3 * u))
         drawRoundRect(Color(0xFF0E1A3A), r.topLeft + Offset(0f, 2.5f * u), r.size, cr)
-        drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF2A3F78), Color(0xFF17264F)), r.top, r.bottom), r.topLeft, r.size, cr)
+        drawRoundRect(pillFace, r.topLeft, r.size, cr)
         drawRoundRect(Color(0xFF4FC3F7), r.topLeft, r.size, cr, style = Stroke(2.5f * u))
         val full = onBelt >= capacity
         label("$onBelt/$capacity", Offset(r.left + (r.width - plus.width) / 2 + 2 * u, r.center.y), 14 * u, if (full) Color(0xFFFF8A80) else Color.White, Color(0xFF0E1A3A), 3 * u)
@@ -756,13 +828,14 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         drawRoundRect(Color(0x26000000), frame.topLeft + Offset(0f, 6 * u), frame.size, CornerRadius(24 * u))
         drawRoundRect(Color.White, frame.topLeft, frame.size, CornerRadius(24 * u))
         drawRoundRect(Color(0xFFC9D2E2), frame.topLeft, frame.size, CornerRadius(24 * u), style = Stroke(1.5f * u))
-        drawRoundRect(Color(0xFFB8C2D3), Offset(picLeft, picTop), Size(grain * GW, picBottom - picTop), CornerRadius(14 * u, 14 * u))
+        drawRoundRect(EMPTY, Offset(picLeft, picTop), Size(grain * GW, picBottom - picTop), CornerRadius(14 * u, 14 * u))
         // Belt tray
         drawRect(Color(0xFF1B2850), Offset(0f, beltTop - 6 * u), Size(w, beltBottom - beltTop + 12 * u))
         drawRect(Color(0xFF2E4285), Offset(0f, beltTop - 6 * u), Size(w, 3 * u))
         drawRect(Brush.verticalGradient(listOf(Color(0xFFB3BBC8), Color(0xFF959FAF)), beltTop, beltBottom), Offset(0f, beltTop), Size(w, beltBottom - beltTop))
         drawRect(Color.White.copy(alpha = 0.85f), Offset(0f, beltTop + 1.5f * u), Size(w, 1.6f * u))
         drawRect(Color.White.copy(alpha = 0.85f), Offset(0f, beltBottom - 3 * u), Size(w, 1.6f * u))
+        beltBrackets()
         // Merge lane: a light road from the lot up and along under the belt.
         val lw = art.bodyW() * beltScale + 12 * u
         val road = Brush.verticalGradient(listOf(Color(0xFFBCC4D0), Color(0xFFA9B2C0)))
@@ -791,6 +864,8 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     private class Setup(val picture: PixelPicture, val grains: IntArray, val lot: Level, val caps: IntArray)
 
     companion object {
+        /** The grey-blue behind the sand, showing wherever it has been scooped away. */
+        private val EMPTY = Color(0xFF8E9AAC)
         const val GW = 180
         const val GH = 128
         const val MAX_CAPACITY = 8
@@ -798,7 +873,8 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         private const val EAT_RATE = 330f
         private const val MERGE_TIME = 0.5f
         private const val GAP = 8f
-        private const val SLIDE_CHANCE = 0.35f
+        private const val SLIDE_CHANCE = 0.75f
+        private const val MAX_FLYERS = 520
         /** How many rows up from the bottom a truck's suction reaches. */
         private const val SUCK_DEPTH = 5
 

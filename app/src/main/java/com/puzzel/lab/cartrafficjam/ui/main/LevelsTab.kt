@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +64,10 @@ import com.puzzel.lab.cartrafficjam.ui.components.WorldArt
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
 import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
 import kotlin.math.sin
+import com.puzzel.lab.cartrafficjam.ui.theme.LocalTabPalette
+import com.puzzel.lab.cartrafficjam.ui.components.ToySign
+import androidx.compose.runtime.getValue
+import com.puzzel.lab.cartrafficjam.core.data.TOTAL_LEVELS
 
 private const val ROW_DP = 92
 private const val ITEMS_PER_COLLECTION = LEVELS_PER_COLLECTION + 1
@@ -79,6 +81,7 @@ private fun indexOfLevel(level: Int): Int {
 
 @Composable
 fun LevelsTab(player: PlayerState, scrollToCollection: Int, onScrolled: () -> Unit, onLevel: (Int) -> Unit) {
+    val pal = LocalTabPalette.current
     val current = player.nextLevel
     val list = rememberLazyListState(initialFirstVisibleItemIndex = (indexOfLevel(current) - 3).coerceAtLeast(0))
     LaunchedEffect(scrollToCollection) {
@@ -89,77 +92,14 @@ fun LevelsTab(player: PlayerState, scrollToCollection: Int, onScrolled: () -> Un
     }
 
     Column(Modifier.fillMaxSize()) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color(0xFF1C5BD0), Color(0xFF2F7CF6))))
-                .statusBarsPadding()
-                .padding(vertical = 10.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                OutlinedText("Level Map", style = GameText.Title, fontSize = 28.sp, strokeWidth = 7f, outline = Color(0xFF0D2C6B))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GameIcon(Icon.STAR, 18.dp)
-                    Text(
-                        " ${player.stars.sum()} stars  ·  ${player.completedCount} / 5000 cleared",
-                        style = GameText.Small.copy(color = Color.White, fontSize = 13.sp),
-                    )
-                }
-            }
-        }
+        // Sky header with the wooden Level Map sign; the map scrolls underneath it.
+        LevelsHeader(stars = player.stars.sum(), cleared = player.completedCount, total = TOTAL_LEVELS)
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
             for (c in 1..TOTAL_COLLECTIONS) {
-                item(key = "h$c", contentType = "header") { WorldHeader(c, player) }
+                item(key = "h$c", contentType = "header") { WorldBanner(c, player) }
                 items(LEVELS_PER_COLLECTION, key = { "l${(c - 1) * LEVELS_PER_COLLECTION + it + 1}" }, contentType = { "level" }) { i ->
                     val level = (c - 1) * LEVELS_PER_COLLECTION + i + 1
                     LevelRow(level, player, current, onLevel)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorldHeader(c: Int, player: PlayerState) {
-    val theme = Themes.forCollection(c)
-    val unlocked = player.isCollectionUnlocked(c)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .background(theme.platform.shade(0.9f)),
-    ) {
-        WorldArt(theme, Modifier.fillMaxSize())
-        Column(
-            Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                Modifier
-                    .background(Color(0xCC0D2C6B), RoundedCornerShape(18.dp))
-                    .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
-                    .padding(horizontal = 18.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("WORLD $c", style = GameText.Small.copy(color = Color(0xFFFFE082), fontFamily = TitleFont, fontSize = 13.sp))
-                    OutlinedText(Themes.collectionName(c), style = GameText.Title, fontSize = 22.sp, strokeWidth = 6f)
-                    if (unlocked) {
-                        Text(
-                            "${player.completedIn(c)} / $LEVELS_PER_COLLECTION  ·  ★ ${player.starsIn(c)}",
-                            style = GameText.Small.copy(color = Color.White, fontSize = 12.sp),
-                        )
-                    }
-                }
-            }
-            if (!unlocked) {
-                Row(
-                    Modifier.padding(top = 6.dp).background(Color(0xCC000000), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    GameIcon(Icon.LOCK, 18.dp)
-                    Text(" Locked", style = GameText.Small.copy(color = Color.White))
                 }
             }
         }
@@ -181,11 +121,12 @@ private fun LevelRow(level: Int, player: PlayerState, current: Int, onLevel: (In
             .drawBehind {
                 drawRect(Brush.horizontalGradient(listOf(ground.shade(0.9f), ground, ground.shade(0.9f))))
                 val rnd = kotlin.random.Random(level * 7919)
-                repeat(14) {
+                repeat(10) {
                     val c = if (rnd.nextBoolean()) ground.tint(0.12f) else ground.shade(0.88f)
                     val p = Offset(rnd.nextFloat() * size.width, rnd.nextFloat() * size.height)
                     drawLine(c, p, p + Offset(1.5f, -4.dp.toPx()), 1.2.dp.toPx(), StrokeCap.Round)
                 }
+                groundDetail(Offset(size.width * (0.06f + rnd.nextFloat() * 0.88f), size.height * (0.15f + rnd.nextFloat() * 0.7f)), ground, rnd.nextInt(4), x)
                 // Scenery on the side away from the road
                 val side = if (x > 0.5f) 0.16f else 0.84f
                 mapProp(theme, Offset(size.width * (side + (rnd.nextFloat() - 0.5f) * 0.12f), size.height * 0.62f), level)
@@ -196,19 +137,28 @@ private fun LevelRow(level: Int, player: PlayerState, current: Int, onLevel: (In
                 val top = Offset((prevX + x) / 2 * size.width, 0f)
                 val mid = Offset(x * size.width, size.height / 2)
                 val bot = Offset((x + nextX) / 2 * size.width, size.height)
+                // The road starts at a world's first node and ends at its last one (rounded ends),
+                // so it never runs into the world banner and gets cut off.
+                val firstInWorld = idxInWorld == 0
+                val lastInWorld = idxInWorld == LEVELS_PER_COLLECTION - 1
                 val road = Path().apply {
                     val k = size.height * 0.28f
-                    moveTo(top.x, top.y)
-                    cubicTo(top.x, top.y + k, mid.x, mid.y - k, mid.x, mid.y)
-                    cubicTo(mid.x, mid.y + k, bot.x, bot.y - k, bot.x, bot.y)
+                    if (firstInWorld) moveTo(mid.x, mid.y) else {
+                        moveTo(top.x, top.y)
+                        cubicTo(top.x, top.y + k, mid.x, mid.y - k, mid.x, mid.y)
+                    }
+                    if (!lastInWorld) cubicTo(mid.x, mid.y + k, bot.x, bot.y - k, bot.x, bot.y)
                 }
-                drawPath(road, Color.Black.copy(alpha = 0.15f), style = Stroke(44.dp.toPx(), cap = StrokeCap.Butt))
-                drawPath(road, Color(0xFFE6E9EC), style = Stroke(40.dp.toPx(), cap = StrokeCap.Butt))
-                drawPath(road, theme.road, style = Stroke(33.dp.toPx(), cap = StrokeCap.Butt))
-                drawPath(
-                    road, Color.White.copy(alpha = 0.75f),
-                    style = Stroke(3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 9.dp.toPx()))),
-                )
+                if (!(firstInWorld && lastInWorld)) {
+                    val cap = if (firstInWorld || lastInWorld) StrokeCap.Round else StrokeCap.Butt
+                    drawPath(road, Color.Black.copy(alpha = 0.15f), style = Stroke(46.dp.toPx(), cap = cap))
+                    drawPath(road, Color(0xFFF1F3F6), style = Stroke(42.dp.toPx(), cap = cap))
+                    drawPath(road, Brush.horizontalGradient(listOf(theme.road.tint(0.08f), theme.road, theme.road.shade(0.9f))), style = Stroke(34.dp.toPx(), cap = cap))
+                    drawPath(
+                        road, Color.White.copy(alpha = 0.85f),
+                        style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 10.dp.toPx()))),
+                    )
+                }
             },
     ) {
         val w = maxWidth
@@ -230,8 +180,8 @@ private fun LevelNode(level: Int, player: PlayerState, current: Int, onLevel: (I
     val base = when {
         isCurrent -> Color(0xFFFF9800)
         stars > 0 -> Color(0xFF5FC12F)
-        unlocked -> Color(0xFF2F8CF6)
-        else -> Color(0xFF9AA3AE)
+        unlocked -> Color(0xFF8E5CF0)
+        else -> Color(0xFFA9B1BE)
     }
     val pulse = rememberInfiniteTransition(label = "node")
     val s by pulse.animateFloat(1f, if (isCurrent) 1.1f else 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "s")
@@ -246,14 +196,23 @@ private fun LevelNode(level: Int, player: PlayerState, current: Int, onLevel: (I
     ) {
         Box(
             Modifier
-                .size(62.dp)
+                .size(66.dp)
                 .drawBehind {
                     val r = size.minDimension / 2
-                    drawCircle(Color.Black.copy(alpha = 0.3f), r, center + Offset(0f, 5.dp.toPx()))
+                    if (isCurrent) {
+                        // Soft glowing halo and a bright ring around the current level.
+                        drawCircle(Brush.radialGradient(listOf(Color(0xAAFFF176), Color.Transparent), center, r + 16.dp.toPx()), r + 16.dp.toPx(), center)
+                        drawCircle(Color(0xFFFFF176), r + 5.dp.toPx(), center, style = Stroke(3.5f.dp.toPx()))
+                    }
+                    drawCircle(Color.Black.copy(alpha = 0.28f), r, center + Offset(0f, 6.dp.toPx()))
+                    drawCircle(base.shade(0.55f), r, center + Offset(0f, 2.5f.dp.toPx()))
                     drawCircle(Color.White, r, center)
-                    drawCircle(Brush.verticalGradient(listOf(base.tint(0.35f), base, base.shade(0.8f))), r - 4.dp.toPx(), center)
-                    drawOval(Color.White.copy(alpha = 0.4f), Offset(r * 0.45f, r * 0.2f), Size(r * 1.1f, r * 0.5f))
-                    if (isCurrent) drawCircle(Color(0xFFFFF59D), r + 4.dp.toPx(), center, style = Stroke(3.dp.toPx()))
+                    drawCircle(base.shade(0.6f), r - 4.5f.dp.toPx(), center)
+                    drawCircle(Brush.verticalGradient(listOf(base.tint(0.4f), base, base.shade(0.82f))), r - 6.dp.toPx(), center)
+                    drawOval(
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.7f), Color.White.copy(alpha = 0.1f)), r * 0.2f, r * 0.85f),
+                        Offset(r * 0.42f, r * 0.2f), Size(r * 1.16f, r * 0.62f),
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -332,10 +291,46 @@ private fun DrawScope.mapProp(theme: SceneTheme, c: Offset, seed: Int) {
                 Backdrop.JUNGLE -> Color(0xFF2E7D32)
                 else -> Color(0xFF43A047)
             }
-            drawRoundRect(Color(0xFF6D4C41), Offset(c.x - 3 * u, c.y - 8 * u), Size(6 * u, 16 * u), CornerRadius(2 * u))
-            drawCircle(leaf.shade(0.78f), 15 * u, c + Offset(2 * u, -16 * u))
-            drawCircle(leaf, 12 * u, c + Offset(-3 * u, -20 * u))
-            drawCircle(leaf.tint(0.3f), 4 * u, c + Offset(-7 * u, -25 * u))
+            // Big fluffy cartoon tree: trunk, layered canopy and a highlight.
+            drawOval(Color.Black.copy(alpha = 0.14f), Offset(c.x - 26 * u, c.y + 4 * u), Size(52 * u, 12 * u))
+            drawRoundRect(Color(0xFF5D3A24), Offset(c.x - 5 * u, c.y - 16 * u), Size(10 * u, 26 * u), CornerRadius(3 * u))
+            drawRoundRect(Color(0xFF8D5A3B), Offset(c.x - 3 * u, c.y - 16 * u), Size(4 * u, 24 * u), CornerRadius(2 * u))
+            drawCircle(leaf.shade(0.7f), 24 * u, c + Offset(0f, -30 * u))
+            drawCircle(leaf.shade(0.85f), 17 * u, c + Offset(-15 * u, -24 * u))
+            drawCircle(leaf.shade(0.85f), 17 * u, c + Offset(15 * u, -24 * u))
+            drawCircle(leaf, 20 * u, c + Offset(-3 * u, -35 * u))
+            drawCircle(leaf.tint(0.2f), 13 * u, c + Offset(-8 * u, -40 * u))
+            drawCircle(leaf.tint(0.45f), 5 * u, c + Offset(-11 * u, -45 * u))
+        }
+    }
+}
+
+/** A small touch of life on the grass: a tuft, a daisy, a pair of rocks or a bush, away from the road. */
+private fun DrawScope.groundDetail(at: Offset, ground: Color, kind: Int, roadX: Float) {
+    val u = 1.dp.toPx()
+    // Keep clear of the road.
+    if (kotlin.math.abs(at.x / size.width - roadX) < 0.22f) return
+    when (kind) {
+        0 -> for (k in -1..1) drawLine(ground.shade(0.7f), at, at + Offset(k * 5 * u, -9 * u), 2 * u, StrokeCap.Round)
+        1 -> {
+            drawLine(Color(0xFF3E8E2E), at, at + Offset(0f, 9 * u), 1.5f * u)
+            for (k in 0 until 5) {
+                val a = k * 72.0 * Math.PI / 180.0
+                drawCircle(Color.White, 3 * u, at + Offset((kotlin.math.cos(a) * 4 * u).toFloat(), (kotlin.math.sin(a) * 4 * u).toFloat()))
+            }
+            drawCircle(Color(0xFFFFC21A), 2.4f * u, at)
+        }
+        2 -> {
+            drawOval(Color.Black.copy(alpha = 0.12f), Offset(at.x - 16 * u, at.y + 5 * u), Size(32 * u, 7 * u))
+            drawOval(Color(0xFF8E8A85), Offset(at.x - 14 * u, at.y - 8 * u), Size(20 * u, 15 * u))
+            drawOval(Color(0xFFB9B4AC), Offset(at.x - 12 * u, at.y - 8 * u), Size(15 * u, 9 * u))
+            drawOval(Color(0xFF9E9A94), Offset(at.x + 2 * u, at.y - 3 * u), Size(13 * u, 10 * u))
+        }
+        else -> {
+            drawCircle(ground.shade(0.62f), 11 * u, at + Offset(-8 * u, 2 * u))
+            drawCircle(ground.shade(0.72f), 13 * u, at)
+            drawCircle(ground.shade(0.62f), 10 * u, at + Offset(10 * u, 3 * u))
+            drawCircle(ground.tint(0.15f), 4 * u, at + Offset(-3 * u, -6 * u))
         }
     }
 }

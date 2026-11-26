@@ -27,15 +27,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +66,9 @@ import com.puzzel.lab.cartrafficjam.core.data.PlayerState
 import com.puzzel.lab.cartrafficjam.game.engine.CROWD_LANES
 import com.puzzel.lab.cartrafficjam.game.engine.CrowdPath
 import com.puzzel.lab.cartrafficjam.game.model.GameMode
+import androidx.compose.foundation.layout.offset
 import com.puzzel.lab.cartrafficjam.game.model.JamColor
+import androidx.compose.foundation.layout.aspectRatio
 import com.puzzel.lab.cartrafficjam.game.modes.ModeArt
 import com.puzzel.lab.cartrafficjam.game.modes.ModeDraw
 import com.puzzel.lab.cartrafficjam.game.modes.PixelPictures
@@ -83,7 +81,7 @@ import com.puzzel.lab.cartrafficjam.ui.components.Icon
 import com.puzzel.lab.cartrafficjam.ui.components.LocalAudio
 import com.puzzel.lab.cartrafficjam.ui.components.OutlinedText
 import com.puzzel.lab.cartrafficjam.ui.theme.GameText
-import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
+import com.puzzel.lab.cartrafficjam.ui.components.drawToyBoard
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -96,6 +94,13 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+import com.puzzel.lab.cartrafficjam.ui.theme.LocalTabPalette
+import com.puzzel.lab.cartrafficjam.ui.components.toyCard
+import com.puzzel.lab.cartrafficjam.ui.components.ToySign
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.puzzel.lab.cartrafficjam.ui.theme.TitleFont
 
 /** The Modes tab: four big cards, one per way to play. */
 @Composable
@@ -104,23 +109,28 @@ fun ModesTab(player: PlayerState, onPlay: (GameMode) -> Unit) {
     val intro = remember { Animatable(0f) }
     LaunchedEffect(Unit) { intro.animateTo(1f, tween(1000, easing = LinearEasing)) }
     Column(Modifier.fillMaxSize()) {
-        TabHeader("Game Modes", "Four ways to beat the traffic")
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ModesHeader()
+        // No scrolling: the four cards share the space under the header equally.
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(GameMode.entries.toList(), key = { _, m -> m.name }) { i, m ->
+            GameMode.entries.forEachIndexed { i, m ->
                 ModeCard(
                     m, player.modeLevel(m), player.modeFinished(m), onPlay,
-                    Modifier.graphicsLayer {
-                        val p = seg(intro.value, i * 0.13f, i * 0.13f + 0.5f)
-                        val e = easeOutBack(p)
-                        alpha = p
-                        translationY = (1f - e) * 70.dp.toPx()
-                        scaleX = 0.9f + 0.1f * e
-                        scaleY = 0.9f + 0.1f * e
-                    },
+                    Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            val p = seg(intro.value, i * 0.13f, i * 0.13f + 0.5f)
+                            val e = easeOutBack(p)
+                            alpha = p
+                            translationY = (1f - e) * 70.dp.toPx()
+                            scaleX = 0.9f + 0.1f * e
+                            scaleY = 0.9f + 0.1f * e
+                        },
                 )
             }
         }
@@ -129,23 +139,14 @@ fun ModesTab(player: PlayerState, onPlay: (GameMode) -> Unit) {
 
 @Composable
 fun TabHeader(title: String, subtitle: String? = null) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color(0xFF1C5BD0), Color(0xFF2F7CF6))))
-            .statusBarsPadding()
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            OutlinedText(title, style = GameText.Title, fontSize = 28.sp, strokeWidth = 7f, outline = Color(0xFF0D2C6B))
-            if (subtitle != null) Text(subtitle, style = GameText.Small.copy(color = Color.White, fontSize = 13.sp))
-        }
-    }
+    val pal = LocalTabPalette.current
+    // A toy billboard in the tab's colors, with the subtitle on a cream ribbon.
+    ToySign(title, subtitle?.let { text -> { Text(text, style = GameText.Small.copy(color = pal.outline, fontSize = 13.sp)) } })
 }
 
 @Composable
 private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (GameMode) -> Unit, modifier: Modifier = Modifier) {
+    val pal = LocalTabPalette.current
     val audio = LocalAudio.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -163,7 +164,7 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
             .fillMaxWidth()
             .graphicsLayer { scaleX = press; scaleY = press }
             .drawBehind {
-                drawRoundRect(Color(0xFF0D2C6B), Offset(0f, 5.dp.toPx()), size, CornerRadius(22.dp.toPx()))
+                drawRoundRect(pal.outline, Offset(0f, 5.dp.toPx()), size, CornerRadius(22.dp.toPx()))
                 drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(22.dp.toPx()))
             }
             .padding(5.dp)
@@ -173,26 +174,29 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                 audio.play(Sfx.Click)
                 onPlay(mode)
             }
-            .padding(8.dp),
+            .padding(7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Square preview as tall as the card allows, so all four cards fit without scrolling.
         Box(
             Modifier
-                .size(112.dp)
+                .fillMaxHeight()
+                .aspectRatio(1f, matchHeightConstraintsFirst = true)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Brush.verticalGradient(listOf(accent.tint(0.35f), accent))),
         ) {
             ModePreview(mode, Modifier.fillMaxSize())
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            OutlinedText(mode.title, style = GameText.Title, fontSize = 23.sp, strokeWidth = 6f, outline = dark)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            OutlinedText(mode.title, style = GameText.Title, fontSize = 22.sp, strokeWidth = 6f, outline = dark)
             Text(
                 mode.tagline,
-                style = GameText.Small.copy(color = Color(0xFF6D4C41), fontSize = 12.5.sp, lineHeight = 15.sp),
-                maxLines = 3,
+                style = GameText.Small.copy(color = Color(0xFF6D4C41), fontSize = 12.sp, lineHeight = 14.sp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     // After the last level the card says so; tapping replays level 5000.
@@ -205,7 +209,7 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                 Spacer(Modifier.weight(1f))
                 Box(
                     Modifier
-                        .size(46.dp, 40.dp)
+                        .size(46.dp, 38.dp)
                         .graphicsLayer {
                             val k = 1f + 0.07f * beat
                             scaleX = k
@@ -224,7 +228,7 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.graphicsLayer { translationX = 2.dp.toPx() * beat }) { GameIcon(Icon.PLAY, 26.dp) }
+                    Box(Modifier.graphicsLayer { translationX = 2.dp.toPx() * beat }) { GameIcon(Icon.PLAY, 24.dp) }
                 }
             }
         }
@@ -233,7 +237,7 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
 
 /** Little looping animation that shows what each mode is about. Every loop ends where it began. */
 @Composable
-private fun ModePreview(mode: GameMode, modifier: Modifier) {
+internal fun ModePreview(mode: GameMode, modifier: Modifier) {
     val period = when (mode) {
         GameMode.CLASSIC -> (ClassicMini.PERIOD_SEC * 1000).toInt()
         GameMode.LOOP -> (LoopMini.PERIOD_SEC * 1000).toInt()

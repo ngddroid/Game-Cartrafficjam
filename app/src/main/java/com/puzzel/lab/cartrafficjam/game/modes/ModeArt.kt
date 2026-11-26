@@ -21,6 +21,10 @@ object ModeArt {
     /**
      * Draws a 3D vehicle sprite centred on [pos] facing [heading] degrees, shadow included.
      * Returns the roof height in pixels so callers can place labels on top.
+     *
+     * Pass [live] while the vehicle is turning: the slice stack is then drawn straight to the
+     * screen instead of building (and allocating) a new cached sprite for every 2° of heading,
+     * which is what made driving and merging stutter.
      */
     fun DrawScope.vehicleSprite(
         art: VehicleArt,
@@ -30,6 +34,7 @@ object ModeArt {
         heading: Float,
         scale: Float = 1f,
         squashX: Float = 1f,
+        live: Boolean = false,
     ): Float {
         val unit = art.unit
         val sh = art.shadow(type)
@@ -39,6 +44,10 @@ object ModeArt {
             rotate(heading, Offset.Zero)
             scale(scale * squashX, scale, Offset.Zero)
         }) { drawImage(sh, Offset(-sh.width / 2f, -sh.height / 2f)) }
+        if (live) {
+            withTransform({ scale(scale * squashX, scale, pos) }) { art.drawLive(this, type, color, heading, pos) }
+            return art.roofZ(type) * scale
+        }
         val comp = art.composite(type, color, false, heading)
         withTransform({
             translate(pos.x, pos.y)
