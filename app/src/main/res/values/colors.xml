@@ -2,4 +2,5 @@
 <resources>
     <color name="splash_bg">#FF7A59</color>
     <color name="ic_bg">#4FC3F7</color>
+    <color name="notification_accent">#FFFF7A3D</color>
 </resources>

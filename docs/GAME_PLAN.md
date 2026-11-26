@@ -131,7 +131,7 @@ Sound effects and two music loops are **synthesized by a Python script** (sine, 
 Single Activity, Navigation Compose, MVVM, DataStore. No DI framework: a small `AppContainer` holds the singletons.
 
 ```
-com.puzzel.lab.cartrafficjam
+com.ngstudio.trafficjam
 ├─ App.kt, MainActivity.kt, AppContainer.kt
 ├─ core/
 │  ├─ audio/   SoundManager, MusicPlayer, Haptics
@@ -177,7 +177,7 @@ Portrait only, edge-to-edge, `minSdk 24`. Back on Home opens the game exit dialo
 
 ## 9. Things to confirm (defaults in brackets)
 
-- Game name: **Traffic Jam Rush** [default]. The package stays `com.puzzel.lab.cartrafficjam`.
+- Game name: **Traffic Jam Rush** [default]. The package stays `com.ngstudio.trafficjam`.
 - "First collection" = the first world of 100 levels [default, see §2].
 - The contact email and company name in the Privacy Policy and Terms: **placeholders** (`support@yourstudio.com`) until you give me real ones.
 - Downloading the two OFL font families from the official Google Fonts GitHub repo (about 300 KB total) during the build.

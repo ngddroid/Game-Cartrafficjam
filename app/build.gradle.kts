@@ -1,16 +1,18 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
-    namespace = "com.puzzel.lab.cartrafficjam"
+    namespace = "com.ngstudio.trafficjam"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.puzzel.lab.cartrafficjam"
+        applicationId = "com.ngstudio.trafficjam"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -35,6 +37,11 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        // False positive: we use ComponentActivity (not FragmentActivity), where
+        // registerForActivityResult is natively supported for the in-app update flow.
+        disable += "InvalidFragmentVersionForActivityResult"
+    }
 }
 
 dependencies {
@@ -52,6 +59,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
+    implementation(libs.play.app.update)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

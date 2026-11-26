@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "808410678030",
+    "project_id": "game-car-traffic",
+    "storage_bucket": "game-car-traffic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:808410678030:android:b2044b64459993d881cd5f",
+        "android_client_info": {
+          "package_name": "com.ngstudio.trafficjam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFWMMFaD2RuvIZU1d6wGr19bYY0SmW9kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:808410678030:android:3dd416ade27c8ea481cd5f",
+        "android_client_info": {
+          "package_name": "com.puzzel.lab.cartrafficjam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFWMMFaD2RuvIZU1d6wGr19bYY0SmW9kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

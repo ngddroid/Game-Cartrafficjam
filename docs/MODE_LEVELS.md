@@ -7,7 +7,7 @@ All levels are **generated from the level number** (with a fixed random seed per
 237 is the same for every player and nothing has to be stored.
 
 The tuning for Crowd Loop, Pixel Crowd and Sand Sweep lives in one file:
-`app/src/main/java/com/puzzel/lab/cartrafficjam/game/gen/ModeCurve.kt`.
+`app/src/main/java/com/ngstudio/trafficjam/game/gen/ModeCurve.kt`.
 Classic keeps its own curve in `DifficultyCurve` (in `LevelGenerator.kt`).
 
 ---
