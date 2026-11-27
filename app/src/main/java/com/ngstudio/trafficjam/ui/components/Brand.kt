@@ -40,7 +40,7 @@ import com.ngstudio.trafficjam.game.render.VehicleArt
 import com.ngstudio.trafficjam.ui.theme.GameText
 import com.ngstudio.trafficjam.ui.theme.Sunset
 
-/** "TRAFFIC JAM RUSH" stacked logo with a gentle idle wobble. */
+/** "TRAFFIC JAM / CAR ESCAPE" stacked logo with a gentle idle wobble. */
 @Composable
 fun GameLogo(modifier: Modifier = Modifier, scale: Float = 1f) {
     val t = rememberInfiniteTransition(label = "logo")
@@ -65,8 +65,8 @@ fun GameLogo(modifier: Modifier = Modifier, scale: Float = 1f) {
                 },
         ) {
             OutlinedText(
-                "RUSH", Modifier.padding(horizontal = 22.dp).offset(y = (-2).dp), style = GameText.Display,
-                fontSize = 36.sp, color = Color.White, outline = Color(0xFF7F0000), strokeWidth = 10f,
+                "CAR ESCAPE", Modifier.padding(horizontal = 18.dp).offset(y = (-2).dp), style = GameText.Display,
+                fontSize = 27.sp, color = Color.White, outline = Color(0xFF7F0000), strokeWidth = 9f,
             )
         }
     }

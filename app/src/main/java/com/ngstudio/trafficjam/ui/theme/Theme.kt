@@ -79,11 +79,11 @@ object TabPalettes {
         Color(0xFF3CBF6E), Color(0xFF179A6A),
         Color(0xFFC9F78A), Color(0xFF55C86A), Color(0xFF0B3D2C),
     )
-    /** Game modes: lavender-to-indigo purple, matching the arcade game picker design. */
+    /** Game modes: bright day sky, the same look as the splash and onboarding screens. */
     val Modes = TabPalette(
-        Color(0xFF8F6CF3), Color(0xFF5B44CC), Color(0xFF34298A),
-        Color(0xFF9B7BFF), Color(0xFF6A4FE0),
-        Color(0xFFC7B5FF), Color(0xFF9C82F7), Color(0xFF2A1A6E),
+        Color(0xFF4FB3F6), Color(0xFF8ED2FF), Color(0xFFD6F2FF),
+        Color(0xFF3FA0E8), Color(0xFF2E8BD8),
+        Color(0xFFBFE6FF), Color(0xFF7FC4F0), Color(0xFF0E2E57),
     )
     /** Garage: purple workshop, matching the garage showroom design. */
     val Garage = TabPalette(

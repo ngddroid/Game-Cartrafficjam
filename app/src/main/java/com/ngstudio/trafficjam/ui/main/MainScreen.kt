@@ -115,7 +115,7 @@ fun MainScreen(
     val skyMid by animateColorAsState(tab.palette.skyMid, skyAnim, label = "skyMid")
     val skyBottom by animateColorAsState(tab.palette.skyBottom, skyAnim, label = "skyBottom")
     // Home (and Levels, under its map) show the cartoon town; Modes, Garage and Settings are purple gradients.
-    val scenery by animateFloatAsState(if (tab == Tab.HOME || tab == Tab.LEVELS) 1f else 0f, tween(450), label = "scenery")
+    val scenery by animateFloatAsState(if (tab == Tab.HOME || tab == Tab.LEVELS || tab == Tab.MODES) 1f else 0f, tween(450), label = "scenery")
     TownBackground(top = skyTop, mid = skyMid, bottom = skyBottom, sceneryAlpha = scenery) {
         Column(Modifier.fillMaxSize()) {
             AnimatedContent(
@@ -186,12 +186,12 @@ fun MainScreen(
 }
 
 /** Navbar colors: a soft purple dock with a lighter lavender tile for the selected tab. */
-private val NavDockTop = Color(0xFF7E64EC)
-private val NavDockBottom = Color(0xFF4A35B5)
-private val NavRim = Color(0xFFB6A6FF)
-private val NavTileTop = Color(0xFFC3B3FF)
-private val NavTileBottom = Color(0xFF9A82F6)
-private val NavInk = Color(0xFF2E1E86)
+private val NavDockTop = Color(0xFFFFFFFF)
+private val NavDockBottom = Color(0xFFEAF1FA)
+private val NavRim = Color(0xFFD5E6F6)
+private val NavTileTop = Color(0xFF5BB8F7)
+private val NavTileBottom = Color(0xFF2E8BD8)
+private val NavInk = Color(0xFF1C4B86)
 
 @Composable
 private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
@@ -207,7 +207,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                 drawRoundRect(NavRim, Offset(0f, 2.dp.toPx()), tall, r)
                 drawRoundRect(Brush.verticalGradient(listOf(NavDockTop, NavDockBottom), 0f, size.height), Offset(0f, 5.dp.toPx()), tall, r)
                 drawRoundRect(
-                    Color.White.copy(alpha = 0.18f), Offset(30.dp.toPx(), 8.dp.toPx()),
+                    Color.White.copy(alpha = 0.7f), Offset(30.dp.toPx(), 7.dp.toPx()),
                     Size(size.width - 60.dp.toPx(), 3.dp.toPx()), CornerRadius(1.5f.dp.toPx()),
                 )
             }
@@ -231,7 +231,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                                 val tl = Offset(inset, 10.dp.toPx() - 4.dp.toPx() * on)
                                 val sz = Size(size.width - 2 * inset, size.height - 14.dp.toPx() + 4.dp.toPx() * on)
                                 val rr = CornerRadius(18.dp.toPx())
-                                drawRoundRect(NavInk.copy(alpha = 0.5f * on), tl + Offset(0f, 3.dp.toPx()), sz, rr)
+                                drawRoundRect(NavInk.copy(alpha = 0.3f * on), tl + Offset(0f, 3.dp.toPx()), sz, rr)
                                 drawRoundRect(Color.White.copy(alpha = on), tl, sz, rr)
                                 drawRoundRect(
                                     Brush.verticalGradient(listOf(NavTileTop, NavTileBottom), tl.y, tl.y + sz.height),
@@ -243,10 +243,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                                     Size(sz.width - 20.dp.toPx(), 6.dp.toPx()), CornerRadius(3.dp.toPx()),
                                 )
                             }
-                            // Soft divider between tabs.
-                            if (index < Tab.entries.lastIndex) {
-                                drawRect(Color.White.copy(alpha = 0.16f), Offset(size.width - 1.dp.toPx(), 20.dp.toPx()), Size(1.dp.toPx(), size.height - 36.dp.toPx()))
-                            }
+
                         },
                     contentAlignment = Alignment.Center,
                 ) {

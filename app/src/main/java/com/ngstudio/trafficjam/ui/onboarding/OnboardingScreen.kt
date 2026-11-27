@@ -49,6 +49,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ngstudio.trafficjam.ui.components.Day
+import com.ngstudio.trafficjam.ui.components.DaySkyBackground
 import com.ngstudio.trafficjam.App
 import com.ngstudio.trafficjam.core.audio.Music
 import com.ngstudio.trafficjam.core.audio.Sfx
@@ -90,7 +92,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
     LaunchedEffect(pager.currentPage) { if (pager.currentPage > 0) audio.play(Sfx.Whoosh) }
     BackHandler(pager.currentPage > 0) { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }
 
-    SkyBackground {
+    DaySkyBackground {
         SunRays(Modifier.fillMaxSize().offset(y = (-180).dp), Color(0x33FFFFFF))
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             HorizontalPager(pager, Modifier.weight(1f)) { index ->
@@ -105,8 +107,8 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                             .fillMaxWidth()
                             .height(330.dp)
                             .clip(RoundedCornerShape(32.dp))
-                            .background(Color.White.copy(alpha = 0.18f))
-                            .border(3.dp, Color.White.copy(alpha = 0.55f), RoundedCornerShape(32.dp)),
+                            .background(Color.White.copy(alpha = 0.5f))
+                            .border(3.dp, Color.White.copy(alpha = 0.95f), RoundedCornerShape(32.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         when (index) {
@@ -117,11 +119,11 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.height(28.dp))
-                    OutlinedText(page.title, style = GameText.Display, fontSize = 38.sp, color = Color(0xFFFFE14D), outline = Sunset.Outline, strokeWidth = 12f)
+                    OutlinedText(page.title, style = GameText.Display, fontSize = 38.sp, color = Color(0xFFFFE14D), outline = Day.Ink, strokeWidth = 12f)
                     Spacer(Modifier.height(12.dp))
                     Text(
                         page.body,
-                        style = GameText.Body.copy(color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center, lineHeight = 25.sp),
+                        style = GameText.Body.copy(color = Day.Ink, fontSize = 18.sp, textAlign = TextAlign.Center, lineHeight = 25.sp),
                     )
                 }
             }
@@ -133,7 +135,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         Modifier
                             .padding(horizontal = 4.dp)
                             .size(w, 12.dp)
-                            .background(if (i == pager.currentPage) Color(0xFFFFD54F) else Color.White.copy(alpha = 0.5f), CircleShape),
+                            .background(if (i == pager.currentPage) Day.Accent else Day.Ink.copy(alpha = 0.22f), CircleShape),
                     )
                 }
             }
@@ -314,7 +316,7 @@ private fun WorldsDemo() {
                     .graphicsLayer { rotationZ = angle }
                     .size(120.dp, 168.dp)
                     .drawBehind {
-                        drawRoundRect(Sunset.Outline, Offset(0f, 5.dp.toPx()), size, CornerRadius(18.dp.toPx()))
+                        drawRoundRect(Day.Ink, Offset(0f, 5.dp.toPx()), size, CornerRadius(18.dp.toPx()))
                         drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(18.dp.toPx()))
                     }
                     .padding(5.dp)
@@ -330,7 +332,7 @@ private fun WorldsDemo() {
             }
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = 6.dp)) {
-            OutlinedText("50 Worlds", style = GameText.Title, fontSize = 26.sp, strokeWidth = 7f, outline = Sunset.Outline)
+            OutlinedText("50 Worlds", style = GameText.Title, fontSize = 26.sp, strokeWidth = 7f, outline = Day.Ink)
         }
         Mascot(80.dp, Modifier.align(Alignment.BottomEnd).padding(8.dp))
         Box(

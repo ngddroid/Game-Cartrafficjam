@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
                             debugMode = if (BuildConfig.DEBUG) intent.getStringExtra("debug_mode") else null,
                             // Debug builds can open a main tab directly: --es debug_tab GARAGE
                             debugTab = if (BuildConfig.DEBUG) intent.getStringExtra("debug_tab") else null,
+                            // Debug builds can preview onboarding: --ez debug_onboarding true
+                            debugOnboarding = BuildConfig.DEBUG && intent.getBooleanExtra("debug_onboarding", false),
                         )
                         if (com.ngstudio.trafficjam.core.ads.AdConfig.enabled) AdOverlay(container.ads)
                         UpdateReadyDialog(updater)
@@ -122,7 +124,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @androidx.compose.runtime.Composable
-private fun AppNavHost(debugLevel: Int, debugMode: String? = null, debugTab: String? = null) {
+private fun AppNavHost(debugLevel: Int, debugMode: String? = null, debugTab: String? = null, debugOnboarding: Boolean = false) {
     val nav = rememberNavController()
     // Screen views for analytics; the main screen reports its tabs itself.
     androidx.compose.runtime.DisposableEffect(nav) {
@@ -150,7 +152,11 @@ private fun AppNavHost(debugLevel: Int, debugMode: String? = null, debugTab: Str
         nav,
         // The NG Studio ident plays first on every launch, then the game's own splash.
         // Debug jumps skip the ident and splash so nothing navigates over the level.
-        startDestination = if (debugLevel > 0) "main" else "intro",
+        startDestination = when {
+            debugOnboarding -> "onboarding"
+            debugLevel > 0 -> "main"
+            else -> "intro"
+        },
         enterTransition = { fadeIn(tween(260)) + scaleIn(tween(260), initialScale = 0.96f) },
         exitTransition = { fadeOut(tween(200)) },
         popEnterTransition = { fadeIn(tween(260)) },

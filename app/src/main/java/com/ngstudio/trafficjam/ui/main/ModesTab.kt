@@ -100,6 +100,7 @@ import com.ngstudio.trafficjam.ui.components.toyCard
 import com.ngstudio.trafficjam.ui.components.ToySign
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.ngstudio.trafficjam.ui.theme.TitleFont
 
@@ -111,28 +112,38 @@ fun ModesTab(player: PlayerState, onPlay: (GameMode) -> Unit) {
     LaunchedEffect(Unit) { intro.animateTo(1f, tween(1000, easing = LinearEasing)) }
     Column(Modifier.fillMaxSize()) {
         ModesHeader()
-        // No scrolling: the four cards share the space under the header equally.
+        // No scrolling: the four cards fill the space under the header as a 2x2 grid.
         Column(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = 13.dp, end = 13.dp, top = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
-            GameMode.entries.forEachIndexed { i, m ->
-                ModeCard(
-                    m, player.modeLevel(m), player.modeFinished(m), onPlay,
-                    Modifier
-                        .weight(1f)
-                        .graphicsLayer {
-                            val p = seg(intro.value, i * 0.13f, i * 0.13f + 0.5f)
-                            val e = easeOutBack(p)
-                            alpha = p
-                            translationY = (1f - e) * 70.dp.toPx()
-                            scaleX = 0.9f + 0.1f * e
-                            scaleY = 0.9f + 0.1f * e
-                        },
-                )
+            for (row in 0..1) {
+                Row(
+                    Modifier.weight(1f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(13.dp),
+                ) {
+                    for (col in 0..1) {
+                        val i = row * 2 + col
+                        val m = GameMode.entries[i]
+                        ModeCard(
+                            m, player.modeLevel(m), player.modeFinished(m), onPlay,
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .graphicsLayer {
+                                    val p = seg(intro.value, i * 0.1f, i * 0.1f + 0.5f)
+                                    val e = easeOutBack(p)
+                                    alpha = p
+                                    translationY = (1f - e) * 70.dp.toPx()
+                                    scaleX = 0.9f + 0.1f * e
+                                    scaleY = 0.9f + 0.1f * e
+                                },
+                        )
+                    }
+                }
             }
         }
     }
@@ -160,81 +171,141 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
     )
     val accent = Color(mode.accent)
     val dark = Color(mode.accentDark)
-    Row(
-        modifier
-            .fillMaxWidth()
-            .graphicsLayer { scaleX = press; scaleY = press }
-            .drawBehind {
-                drawRoundRect(pal.outline, Offset(0f, 5.dp.toPx()), size, CornerRadius(22.dp.toPx()))
-                drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(22.dp.toPx()))
-            }
-            .padding(5.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0xFFFFF8E7), Color(0xFFFFEFCB))))
-            .clickable(interaction, null) {
-                audio.play(Sfx.Click)
-                onPlay(mode)
-            }
-            .padding(7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Square preview as tall as the card allows, so all four cards fit without scrolling.
-        Box(
+    Box(modifier.fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
+        Column(
             Modifier
-                .fillMaxHeight()
-                .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.verticalGradient(listOf(accent.tint(0.35f), accent))),
+                .fillMaxSize()
+                .graphicsLayer { scaleX = press; scaleY = press }
+                .clip(RoundedCornerShape(26.dp))
+                .drawBehind {
+                    val w = size.width
+                    val h = size.height
+                    val r = CornerRadius(26.dp.toPx())
+                    // Thick colored border, then a lighter inner body with a chunky bottom lip.
+                    drawRoundRect(dark.shade(0.95f), Offset.Zero, size, r)
+                    val inset = 5.dp.toPx()
+                    val lip = 10.dp.toPx()
+                    drawRoundRect(
+                        Brush.verticalGradient(listOf(accent.tint(0.3f), accent, accent.tint(0.12f))),
+                        Offset(inset, inset), Size(w - 2 * inset, h - inset - lip), CornerRadius(20.dp.toPx()),
+                    )
+                    drawRoundRect(
+                        Color.White.copy(alpha = 0.32f),
+                        Offset(inset + 12.dp.toPx(), inset + 6.dp.toPx()), Size(w - 2 * inset - 24.dp.toPx(), 9.dp.toPx()), CornerRadius(5.dp.toPx()),
+                    )
+                }
+                .clickable(interaction, null) {
+                    audio.play(Sfx.Click)
+                    onPlay(mode)
+                }
+                .padding(start = 11.dp, end = 11.dp, top = 20.dp, bottom = 11.dp),
+            horizontalAlignment = Alignment.Start,
         ) {
-            ModePreview(mode, Modifier.fillMaxSize())
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            OutlinedText(mode.title, style = GameText.Title, fontSize = 22.sp, strokeWidth = 6f, outline = dark)
+            // Preview in a white rounded frame, filling the top of the card.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .drawBehind {
+                        drawRoundRect(dark.copy(alpha = 0.28f), Offset(0f, 3.dp.toPx()), size, CornerRadius(16.dp.toPx()))
+                        drawRoundRect(Color.White, Offset.Zero, size, CornerRadius(16.dp.toPx()))
+                    }
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.verticalGradient(listOf(accent.tint(0.35f), accent))),
+            ) {
+                ModePreview(mode, Modifier.fillMaxSize())
+            }
+            Spacer(Modifier.height(7.dp))
+            // Small emblem + title.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Canvas(Modifier.size(28.dp)) { drawEmblem(titleEmblem(mode), center, size.minDimension * 0.36f) }
+                Spacer(Modifier.width(6.dp))
+                OutlinedText(mode.title, style = GameText.Title, fontSize = 19.sp, strokeWidth = 5f, color = Color.White, outline = dark.shade(0.85f))
+            }
+            Spacer(Modifier.height(3.dp))
             Text(
                 mode.tagline,
-                style = GameText.Small.copy(color = Color(0xFF6D4C41), fontSize = 12.sp, lineHeight = 14.sp),
+                style = GameText.Small.copy(color = Color.White.copy(alpha = 0.92f), fontSize = 10.5.sp, lineHeight = 12.5.sp),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.weight(0.001f))
             Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    // After the last level the card says so; tapping replays level 5000.
-                    if (finished) "All $level done!" else "Level $level",
-                    style = GameText.Label.copy(color = Color.White, fontFamily = TitleFont, fontSize = 14.sp),
+                    if (finished) "Done!" else "Level $level",
+                    style = GameText.Label.copy(color = dark.shade(0.9f), fontFamily = TitleFont, fontSize = 13.sp),
                     modifier = Modifier
-                        .background(dark, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 3.dp),
+                        .drawBehind {
+                            drawRoundRect(dark.copy(alpha = 0.22f), Offset(0f, 2.dp.toPx()), size, CornerRadius(11.dp.toPx()))
+                            drawRoundRect(Color(0xFFFFF6E3), Offset.Zero, size, CornerRadius(11.dp.toPx()))
+                        }
+                        .padding(horizontal = 11.dp, vertical = 4.dp),
                 )
                 Spacer(Modifier.weight(1f))
+                // Round green play button: white ring, glossy dome and a rounded arrow.
                 Box(
                     Modifier
-                        .size(46.dp, 38.dp)
+                        .size(40.dp)
                         .graphicsLayer {
-                            val k = 1f + 0.07f * beat
+                            val k = 1f + 0.05f * beat
                             scaleX = k
                             scaleY = k
                         }
                         .drawBehind {
-                            val r = CornerRadius(14.dp.toPx())
-                            // Soft breathing glow so the play button invites a tap.
-                            val g = 3.dp.toPx() + 4.dp.toPx() * beat
-                            drawRoundRect(
-                                Color(0xFF9CE65C).copy(alpha = 0.45f * (1f - beat)),
-                                Offset(-g, -g), Size(size.width + 2 * g, size.height + 2 * g), CornerRadius(r.x + g),
+                            val rad = size.minDimension / 2
+                            val cc = center
+                            val g = 2.dp.toPx() + 5.dp.toPx() * beat
+                            // Soft breathing glow.
+                            drawCircle(Color(0xFF8BE05A).copy(alpha = 0.55f * (1f - beat)), rad + g, cc)
+                            // Drop shadow under the button.
+                            drawCircle(Color(0xFF14421A).copy(alpha = 0.35f), rad, cc + Offset(0f, 3.dp.toPx()))
+                            // White rim.
+                            drawCircle(Color.White, rad, cc)
+                            // Green dome: bright at the top, deep at the bottom.
+                            val br = rad - 2.6.dp.toPx()
+                            drawCircle(Color(0xFF2E7D32), br, cc)
+                            drawCircle(
+                                Brush.verticalGradient(listOf(Color(0xFFB4F06A), Color(0xFF57C03A), Color(0xFF3E9E2C)), cc.y - br, cc.y + br),
+                                br - 1.4.dp.toPx(), cc,
                             )
-                            drawRoundRect(Color(0xFF2E7D32), Offset(0f, 4.dp.toPx()), size, r)
-                            drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF9CE65C), Color(0xFF4CAF50))), Offset.Zero, Size(size.width, size.height - 2.dp.toPx()), r)
+                            // Glossy top highlight.
+                            drawOval(
+                                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0f)), cc.y - br * 0.9f, cc.y),
+                                Offset(cc.x - br * 0.62f, cc.y - br * 0.78f), Size(br * 1.24f, br * 0.82f),
+                            )
+                            // Rounded white play arrow.
+                            val hh = rad * 0.46f
+                            val tx = cc.x + rad * 0.1f + 2.dp.toPx() * beat
+                            val tri = Path().apply {
+                                moveTo(tx - hh * 0.62f, cc.y - hh)
+                                lineTo(tx - hh * 0.62f, cc.y + hh)
+                                lineTo(tx + hh * 0.9f, cc.y)
+                                close()
+                            }
+                            drawPath(tri, Color(0x33123A12))
+                            drawPath(tri, Color.White)
+                            drawPath(tri, Color.White, style = Stroke(hh * 0.42f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                         },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(Modifier.graphicsLayer { translationX = 2.dp.toPx() * beat }) { GameIcon(Icon.PLAY, 24.dp) }
-                }
+                )
             }
         }
+        // Emblem badge popping out of the top.
+        Canvas(
+            Modifier.align(Alignment.TopCenter).offset(y = (-22).dp).size(52.dp),
+        ) { drawEmblem(topEmblem(mode), center, size.minDimension * 0.34f) }
     }
 }
+
+private fun topEmblem(m: GameMode) = when (m) {
+    GameMode.CLASSIC -> Emblem.CROWN
+    GameMode.LOOP -> Emblem.CROWD
+    GameMode.PIXEL -> Emblem.HEART
+    GameMode.SAND -> Emblem.SAND
+}
+
+private fun titleEmblem(m: GameMode) = if (m == GameMode.CLASSIC) Emblem.CAR else topEmblem(m)
 
 /** Little looping animation that shows what each mode is about. Every loop ends where it began. */
 @Composable

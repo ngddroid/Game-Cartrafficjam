@@ -39,6 +39,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ngstudio.trafficjam.ui.components.Day
+import com.ngstudio.trafficjam.ui.components.DaySkyBackground
 import com.ngstudio.trafficjam.App
 import com.ngstudio.trafficjam.core.audio.Sfx
 import com.ngstudio.trafficjam.game.model.JamColor
@@ -74,8 +76,8 @@ fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
     val road = rememberInfiniteTransition(label = "road")
     val dash by road.animateFloat(0f, 1f, infiniteRepeatable(tween(500, easing = LinearEasing)), label = "dash")
 
-    SkyBackground {
-        SunRays(Modifier.fillMaxSize().offset(y = (-120).dp))
+    DaySkyBackground(hillsTop = 360.dp) {
+        SunRays(Modifier.fillMaxSize().offset(y = (-120).dp), Color(0x40FFFFFF))
         Column(
             Modifier.fillMaxSize().statusBarsPadding().padding(top = 70.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -128,7 +130,7 @@ fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .height(26.dp)
-                    .background(Sunset.Outline, RoundedCornerShape(13.dp))
+                    .background(Day.Ink, RoundedCornerShape(13.dp))
                     .padding(4.dp)
                     .drawBehind {
                         val w = size.width * load.value
@@ -142,7 +144,7 @@ fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text("Loading ${(load.value * 100).toInt()}%", style = GameText.Label.copy(color = Color.White, fontSize = 15.sp))
             Spacer(Modifier.height(4.dp))
-            OutlinedText("5000 Levels to Explore", style = GameText.Title, fontSize = 18.sp, color = Color(0xFFFFE082), strokeWidth = 5f)
+            OutlinedText("5000 Levels to Explore", style = GameText.Title, fontSize = 18.sp, color = Color(0xFFFFE082), outline = Day.Ink, strokeWidth = 5f)
         }
     }
 }
