@@ -3,7 +3,9 @@ package com.ngstudio.trafficjam.ui.web
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Bitmap
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -35,21 +37,34 @@ import com.ngstudio.trafficjam.ui.components.RoundButton
 import com.ngstudio.trafficjam.ui.theme.GameText
 import com.ngstudio.trafficjam.ui.theme.Sunset
 
-private fun titleFor(file: String) = if (file.contains("terms")) "Terms of Service" else "Privacy Policy"
+private const val SITE_HOST = "game-trafficjamcarescape.web.app"
+private const val LIVE_PRIVACY = "https://$SITE_HOST/privacy_policy.html"
+private const val LIVE_TERMS = "https://$SITE_HOST/terms_of_condition.html"
 
-/** Shows one of the bundled HTML documents from assets; the two docs cross-link to each other. */
+private fun isTerms(url: String) = url.contains("terms") || url.contains("condition")
+private fun titleFor(url: String) = if (isTerms(url)) "Terms of Service" else "Privacy Policy"
+
+/** The bundled copy to fall back to when the matching live page cannot load. */
+private fun localFor(url: String) =
+    "file:///android_asset/" + if (isTerms(url)) "terms_of_service.html" else "privacy_policy.html"
+
+/**
+ * Shows the Privacy Policy / Terms. It loads the live web page first and quietly falls back to the
+ * HTML bundled in assets if the live page fails (offline, server down, etc.). The two docs
+ * cross-link to each other.
+ */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun WebScreen(doc: String, onBack: () -> Unit) {
-    val startFile = if (doc == "terms") "terms_of_service.html" else "privacy_policy.html"
-    var title by remember { mutableStateOf(titleFor(startFile)) }
+    val startUrl = if (doc == "terms") LIVE_TERMS else LIVE_PRIVACY
+    var title by remember { mutableStateOf(titleFor(startUrl)) }
     var webView by remember { mutableStateOf<WebView?>(null) }
 
-    // Back goes to the previous document first (after following a cross-link), then leaves the screen.
-    BackHandler {
+    fun back() {
         val wv = webView
         if (wv != null && wv.canGoBack()) wv.goBack() else onBack()
     }
+    BackHandler { back() }
 
     Column(Modifier.fillMaxSize().background(Sunset.SkyBottom)) {
         Box(
@@ -59,14 +74,7 @@ fun WebScreen(doc: String, onBack: () -> Unit) {
                 .statusBarsPadding()
                 .padding(horizontal = 10.dp, vertical = 8.dp),
         ) {
-            RoundButton(
-                onClick = {
-                    val wv = webView
-                    if (wv != null && wv.canGoBack()) wv.goBack() else onBack()
-                },
-                modifier = Modifier.align(Alignment.CenterStart),
-                size = 44.dp,
-            ) {
+            RoundButton(onClick = { back() }, modifier = Modifier.align(Alignment.CenterStart), size = 44.dp) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
             }
             OutlinedText(title, Modifier.align(Alignment.Center), style = GameText.Title, fontSize = 24.sp, strokeWidth = 6f, outline = Sunset.Outline)
@@ -80,19 +88,36 @@ fun WebScreen(doc: String, onBack: () -> Unit) {
                     settings.allowFileAccess = true
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-                            // Keep the toolbar title in step with the document being shown.
                             if (url != null) title = titleFor(url)
                         }
 
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                             val url = request.url
-                            // Local docs (including the cross-link) load in-place; anything else opens outside.
-                            if (url.scheme == "file") return false
+                            // Our own pages (live site or bundled file) stay in the WebView.
+                            if (url.scheme == "file" || url.host == SITE_HOST) return false
+                            // Anything else (e.g. Google's policy page) opens in the browser.
                             runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url)) }
                             return true
                         }
+
+                        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                            fallBackIfLive(view, request)
+                        }
+
+                        override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
+                            fallBackIfLive(view, request)
+                        }
+
+                        /** When a live page fails to load, swap in the matching bundled copy. */
+                        private fun fallBackIfLive(view: WebView, request: WebResourceRequest) {
+                            if (!request.isForMainFrame) return
+                            val url = request.url
+                            if (url.scheme == "http" || url.scheme == "https") {
+                                view.loadUrl(localFor(url.toString()))
+                            }
+                        }
                     }
-                    loadUrl("file:///android_asset/$startFile")
+                    loadUrl(startUrl)
                 }
             },
             modifier = Modifier.fillMaxSize().navigationBarsPadding(),
