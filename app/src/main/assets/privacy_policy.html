@@ -429,6 +429,21 @@
     html { scroll-behavior: auto; }
     .card { opacity: 1; transform: none; }
   }
+  .doc-link-wrap { text-align: center; margin: 4px 0 16px; }
+  .doc-link {
+    display: inline-block;
+    margin: 2px auto 14px;
+    padding: 12px 24px;
+    background: linear-gradient(#FFF8E7, #F3E2BC);
+    color: var(--navy);
+    font-size: 15px;
+    font-weight: 800;
+    text-decoration: none;
+    border: 3px solid var(--navy);
+    border-radius: 16px;
+    box-shadow: 0 4px 0 var(--navy);
+  }
+  .doc-link:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--navy); }
 </style>
 </head>
 <body>
@@ -488,6 +503,7 @@
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" fill="#fff" stroke="#3D1033" stroke-width="2.5"/><path d="M3 10h18" stroke="#3D1033" stroke-width="2.5"/><path d="M8 3v4M16 3v4" stroke="#3D1033" stroke-width="2.5" stroke-linecap="round"/></svg>
     Last updated: November 26, 2026
   </div>
+  <div class="doc-link-wrap"><a class="doc-link" href="terms_of_service.html">Read our Terms of Service →</a></div>
 
   <section class="card" id="overview">
       <h2><span class="num">1</span>Overview</h2>
