@@ -72,6 +72,7 @@ import com.ngstudio.trafficjam.game.model.JamColor
 import androidx.compose.foundation.layout.aspectRatio
 import com.ngstudio.trafficjam.game.modes.ModeArt
 import com.ngstudio.trafficjam.game.modes.ModeDraw
+import com.ngstudio.trafficjam.game.modes.PixelPicture
 import com.ngstudio.trafficjam.game.modes.PixelPictures
 import com.ngstudio.trafficjam.game.render.PassengerArt
 import com.ngstudio.trafficjam.game.render.jamColor
@@ -163,12 +164,6 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val press by animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.45f, stiffness = 700f), label = "press")
-    val pulse = rememberInfiniteTransition(label = "play")
-    val beat by pulse.animateFloat(
-        0f, 1f,
-        infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "beat",
-    )
     val accent = Color(mode.accent)
     val dark = Color(mode.accentDark)
     Box(modifier.fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
@@ -198,7 +193,7 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                     audio.play(Sfx.Click)
                     onPlay(mode)
                 }
-                .padding(start = 11.dp, end = 11.dp, top = 20.dp, bottom = 11.dp),
+                .padding(start = 11.dp, end = 11.dp, top = 18.dp, bottom = 15.dp),
             horizontalAlignment = Alignment.Start,
         ) {
             // Preview in a white rounded frame, filling the top of the card.
@@ -230,8 +225,8 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.weight(0.001f))
-            Spacer(Modifier.height(6.dp))
+            // A fixed gap so the play button's row always clears the tagline above it.
+            Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     if (finished) "Done!" else "Level $level",
@@ -247,24 +242,18 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                 // Round green play button: white ring, glossy dome and a rounded arrow.
                 Box(
                     Modifier
-                        .size(40.dp)
-                        .graphicsLayer {
-                            val k = 1f + 0.05f * beat
-                            scaleX = k
-                            scaleY = k
-                        }
+                        .size(36.dp)
                         .drawBehind {
                             val rad = size.minDimension / 2
                             val cc = center
-                            val g = 2.dp.toPx() + 5.dp.toPx() * beat
-                            // Soft breathing glow.
-                            drawCircle(Color(0xFF8BE05A).copy(alpha = 0.55f * (1f - beat)), rad + g, cc)
+                            // Soft static glow.
+                            drawCircle(Color(0xFF8BE05A).copy(alpha = 0.35f), rad + 2.dp.toPx(), cc)
                             // Drop shadow under the button.
-                            drawCircle(Color(0xFF14421A).copy(alpha = 0.35f), rad, cc + Offset(0f, 3.dp.toPx()))
-                            // White rim.
+                            drawCircle(Color(0xFF14421A).copy(alpha = 0.3f), rad, cc + Offset(0f, 2.dp.toPx()))
+                            // White rim (thin).
                             drawCircle(Color.White, rad, cc)
                             // Green dome: bright at the top, deep at the bottom.
-                            val br = rad - 2.6.dp.toPx()
+                            val br = rad - 1.8.dp.toPx()
                             drawCircle(Color(0xFF2E7D32), br, cc)
                             drawCircle(
                                 Brush.verticalGradient(listOf(Color(0xFFB4F06A), Color(0xFF57C03A), Color(0xFF3E9E2C)), cc.y - br, cc.y + br),
@@ -275,9 +264,9 @@ private fun ModeCard(mode: GameMode, level: Int, finished: Boolean, onPlay: (Gam
                                 Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0f)), cc.y - br * 0.9f, cc.y),
                                 Offset(cc.x - br * 0.62f, cc.y - br * 0.78f), Size(br * 1.24f, br * 0.82f),
                             )
-                            // Rounded white play arrow.
+                            // Rounded white play arrow (static).
                             val hh = rad * 0.46f
-                            val tx = cc.x + rad * 0.1f + 2.dp.toPx() * beat
+                            val tx = cc.x + rad * 0.1f
                             val tri = Path().apply {
                                 moveTo(tx - hh * 0.62f, cc.y - hh)
                                 lineTo(tx - hh * 0.62f, cc.y + hh)
@@ -309,11 +298,16 @@ private fun titleEmblem(m: GameMode) = if (m == GameMode.CLASSIC) Emblem.CAR els
 
 /** Little looping animation that shows what each mode is about. Every loop ends where it began. */
 @Composable
-internal fun ModePreview(mode: GameMode, modifier: Modifier) {
+internal fun ModePreview(mode: GameMode, modifier: Modifier, picture: PixelPicture? = null, holdPicture: Boolean = false) {
+    // PIXEL and SAND draw a picture; null means the default heart (so the Modes tab is unchanged).
+    // holdPicture keeps the SAND picture full for the whole loop (onboarding wants the star always readable).
+    val pic = picture ?: heartPic
+    val pixel = remember(pic) { if (mode == GameMode.PIXEL) PixelMini.of(pic) else null }
+    val sand = remember(pic) { if (mode == GameMode.SAND) SandMini.of(pic) else null }
     val period = when (mode) {
         GameMode.CLASSIC -> (ClassicMini.PERIOD_SEC * 1000).toInt()
         GameMode.LOOP -> (LoopMini.PERIOD_SEC * 1000).toInt()
-        GameMode.PIXEL -> (PixelMini.periodSec * 1000).toInt()
+        GameMode.PIXEL -> (pixel!!.periodSec * 1000).toInt()
         GameMode.SAND -> 6500
     }
     val anim = rememberInfiniteTransition(label = "preview")
@@ -322,8 +316,8 @@ internal fun ModePreview(mode: GameMode, modifier: Modifier) {
         when (mode) {
             GameMode.CLASSIC -> classicPreview(t)
             GameMode.LOOP -> loopPreview(t)
-            GameMode.PIXEL -> pixelPreview(t)
-            GameMode.SAND -> sandPreview(t)
+            GameMode.PIXEL -> pixelPreview(t, pixel!!)
+            GameMode.SAND -> sandPreview(t, sand!!, holdPicture)
         }
     }
 }
@@ -1002,8 +996,12 @@ private fun DrawScope.loopPreview(t: Float) {
 
 // ---- Pixel Crowd: a bus leaves the garage, and the picture's outside riders run to it ----
 
-/** The picture the Pixel Crowd and Sand Sweep previews are made from (the game's first one). */
-private val previewPic = PixelPictures.all.first()
+/** The default picture the Pixel Crowd and Sand Sweep previews are made from (the game's first one, a heart). */
+private val heartPic = PixelPictures.all.first()
+
+// Pulled out of PixelMini so its nested Run class can see them regardless of the picture it was built for.
+private const val PIXEL_RUN_SPEED = 175f / 360f // tile widths per second, the game's speed
+private const val PIXEL_BOARD_INTERVAL = 0.05f
 
 /**
  * A small copy of the real Pixel Crowd board: the blue garage with three lanes, the road, four
@@ -1014,41 +1012,37 @@ private val previewPic = PixelPictures.all.first()
  * pink riders it uncovered, and the picture rebuilds. Everything is worked out once, in units of
  * the tile width, and played back.
  */
-private object PixelMini {
-    private val pic = previewPic
+private class PixelMini(val pic: PixelPicture) {
     val pw = pic.w
     val ph = pic.h
-    private const val MARGIN = 2
+    private val MARGIN = 2
     private val nw = pw + MARGIN * 2
     private val nh = ph + MARGIN * 2
 
     // Tile-relative geometry (fractions of the tile width).
-    const val GARAGE_TOP = 0.03f
-    const val GARAGE_BOTTOM = 0.22f
-    const val ROAD_Y = 0.26f
-    const val ROAD_TOP = 0.22f
-    const val ROAD_BOTTOM = 0.30f
-    const val STOP_TOP = 0.315f
-    const val STOP_H = 0.19f
-    const val STOPS = 4
-    const val OPEN_STOPS = 3
-    const val BUS_LEN = 0.15f
-    const val BUS_WID = 0.08f
+    val GARAGE_TOP = 0.03f
+    val GARAGE_BOTTOM = 0.22f
+    val ROAD_Y = 0.26f
+    val ROAD_TOP = 0.22f
+    val ROAD_BOTTOM = 0.30f
+    val STOP_TOP = 0.315f
+    val STOP_H = 0.19f
+    val STOPS = 4
+    val OPEN_STOPS = 3
+    val BUS_LEN = 0.15f
+    val BUS_WID = 0.08f
     val stopW = (1f - 24f / 360f - 3 * 8f / 360f) / STOPS
     fun stopX(i: Int) = 12f / 360f + stopW / 2 + i * (stopW + 8f / 360f)
     fun laneX(i: Int) = (1 + 2 * i) / 6f
-    const val GARAGE_SPOT_Y = 0.145f
+    val GARAGE_SPOT_Y = 0.145f
     val cell = min(0.93f / pw, 0.42f / ph)
     val picLeft = (1f - cell * pw) / 2
-    const val PIC_TOP = 0.565f
-
-    private const val RUN_SPEED = 175f / 360f // tile widths per second, the game's speed
-    private const val BOARD_INTERVAL = 0.05f
+    val PIC_TOP = 0.565f
 
     /** One rider leaving the picture: its cell, when it sets off, and its route to the door. */
     class Run(val cell: Int, val color: Int, val bus: Int, val start: Float, val xs: FloatArray, val ys: FloatArray, val cum: FloatArray, val side: Float, val phase: Float) {
         val length get() = cum.last()
-        val arrive get() = start + length / RUN_SPEED
+        val arrive get() = start + length / PIXEL_RUN_SPEED
     }
 
     /** A bus's trip: which lane and stop, and when it is tapped, parks, fills and leaves. */
@@ -1114,7 +1108,7 @@ private object PixelMini {
                 runOf[pick] = runs.size
                 runs += run
                 lastArrive = max(lastArrive, run.arrive)
-                launch += BOARD_INTERVAL
+                launch += PIXEL_BOARD_INTERVAL
             }
             trip.cap = runs.count { it.bus == ti }
             trip.full = lastArrive
@@ -1286,7 +1280,7 @@ private object PixelMini {
         out[3] = (r.ys[k] - r.ys[k - 1]) / segLen
     }
 
-    fun runDist(r: Run, sec: Float) = max(0f, sec - r.start) * RUN_SPEED
+    fun runDist(r: Run, sec: Float) = max(0f, sec - r.start) * PIXEL_RUN_SPEED
 
     // Size-dependent art.
     private var forSize = -1f
@@ -1310,11 +1304,17 @@ private object PixelMini {
     }
 
     val source get() = pic
+
+    companion object {
+        // The precompute (route planning, flood fills, nav fields) is expensive, so each picture
+        // is built once and reused.
+        private val cache = HashMap<PixelPicture, PixelMini>()
+        fun of(pic: PixelPicture) = cache.getOrPut(pic) { PixelMini(pic) }
+    }
 }
 
-private fun DrawScope.pixelPreview(t: Float) {
+private fun DrawScope.pixelPreview(t: Float, m: PixelMini) {
     val s = size.width
-    val m = PixelMini
     m.prepare(s)
     val sec = t * m.periodSec
     val u = s / 360f
@@ -1587,24 +1587,24 @@ private fun DrawScope.pixelPreview(t: Float) {
  * of the bottom, and the sand above falls straight down or slides diagonally into the gaps. The
  * preview then just plays the recorded frames back, drawn as one smoothed bitmap like the game.
  */
-private object SandMini {
-    const val GW = 90
-    const val GH = 48
-    private const val DEPTH = 4
-    private const val EAT_PER_FRAME = 7
-    private const val SLIDE_CHANCE = 0.35f
-    const val RIDE_FRAMES = 150
-    const val SETTLE_FRAMES = 30
-    const val FRAMES = RIDE_FRAMES + SETTLE_FRAMES
+private class SandMini(val pic: PixelPicture) {
+    val GW = 90
+    val GH = 48
+    private val DEPTH = 4
+    private val EAT_PER_FRAME = 7
+    private val SLIDE_CHANCE = 0.35f
+    val RIDE_FRAMES = 150
+    val SETTLE_FRAMES = 30
+    val FRAMES = RIDE_FRAMES + SETTLE_FRAMES
 
     // Tile-relative geometry shared with [sandPreview].
-    const val PIC_LEFT = 0.08f
-    const val PIC_W = 0.84f
-    const val MERGE_X = 0.3f
-    const val BELT_END = 0.9f
-    const val TRUCK_LEN = 0.2f
+    val PIC_LEFT = 0.08f
+    val PIC_W = 0.84f
+    val MERGE_X = 0.3f
+    val BELT_END = 0.9f
+    val TRUCK_LEN = 0.2f
 
-    val eatColor = previewPic.background
+    val eatColor = pic.background
 
     /** Grain codes (color * 8 + shade, or -1) for each recorded frame. */
     private val frames: Array<ByteArray>
@@ -1721,7 +1721,7 @@ private object SandMini {
 
     /** The game's painter, scaled down: smooth edges, brush-stroke shading and darker rims. */
     private fun paint(): ByteArray {
-        val p = previewPic
+        val p = pic
         val rng = Random(3)
         val kf = min(GW.toFloat() / p.w, GH.toFloat() / p.h) * 0.9f
         val ox = (GW - p.w * kf) / 2f
@@ -1771,11 +1771,16 @@ private object SandMini {
             (c * 8 + shade.roundToInt().coerceIn(0, 7)).toByte()
         }
     }
+
+    companion object {
+        // Simulating ~180 frames of falling sand is expensive, so each picture is built once.
+        private val cache = HashMap<PixelPicture, SandMini>()
+        fun of(pic: PixelPicture) = cache.getOrPut(pic) { SandMini(pic) }
+    }
 }
 
-private fun DrawScope.sandPreview(t: Float) {
+private fun DrawScope.sandPreview(t: Float, m: SandMini, holdPicture: Boolean = false) {
     val s = size.width
-    val m = SandMini
     val cell = s * m.PIC_W / m.GW
     val picLeft = s * m.PIC_LEFT
     val picTop = s * 0.06f
@@ -1833,8 +1838,8 @@ private fun DrawScope.sandPreview(t: Float) {
         else -> truckScale = easeOutBack(seg(t, 0.88f, 0.98f))
     }
 
-    // --- Sand picture: play back the simulated frames ---
-    val framePos = when {
+    // --- Sand picture: play back the simulated frames (onboarding holds the full picture so the star stays readable) ---
+    val framePos = if (holdPicture) -1f else when {
         t < 0.32f -> -1f
         t < 0.80f -> ride * (m.RIDE_FRAMES - 1)
         else -> m.RIDE_FRAMES + seg(t, 0.80f, 0.86f) * (m.SETTLE_FRAMES - 1)
@@ -1922,6 +1927,8 @@ private fun DrawScope.sandPreview(t: Float) {
     val fill = when {
         t < 0.32f || t >= 0.88f -> 0f
         t >= 0.80f -> 1f
+        // When holding the picture there is no per-frame scoop to read; the truck just loads as it rides.
+        holdPicture -> ride
         else -> m.eatenAt[frame].toFloat() / max(1, m.eatenAt[m.RIDE_FRAMES - 1])
     }
     if (fill > 0.01f) {

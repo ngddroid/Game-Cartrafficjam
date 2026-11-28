@@ -72,6 +72,7 @@ import com.ngstudio.trafficjam.ui.components.GameToast
 import com.ngstudio.trafficjam.ui.components.Icon
 import com.ngstudio.trafficjam.ui.components.LocalAudio
 import com.ngstudio.trafficjam.ui.components.OutlinedText
+import com.ngstudio.trafficjam.ui.components.GearButton
 import com.ngstudio.trafficjam.ui.components.RoundButton
 import com.ngstudio.trafficjam.ui.components.WatchAdDialog
 import com.ngstudio.trafficjam.ui.theme.GameText
@@ -362,7 +363,7 @@ private fun ModeHud(title: String, counter: Int, counterLabel: String, accent: C
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RoundButton(onPause, size = 44.dp) { GameIcon(Icon.GEAR, 30.dp) }
+        GearButton(onPause, size = 44.dp)
         Spacer(Modifier.weight(1f))
         Column(
             Modifier

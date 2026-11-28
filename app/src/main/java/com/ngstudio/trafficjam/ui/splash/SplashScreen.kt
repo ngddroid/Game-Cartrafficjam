@@ -53,6 +53,7 @@ import com.ngstudio.trafficjam.ui.components.OutlinedText
 import com.ngstudio.trafficjam.ui.components.SkyBackground
 import com.ngstudio.trafficjam.ui.components.SunRays
 import com.ngstudio.trafficjam.ui.components.VehicleSprite
+import com.ngstudio.trafficjam.ui.components.drawRoadCar
 import com.ngstudio.trafficjam.ui.theme.GameText
 import kotlinx.coroutines.delay
 import com.ngstudio.trafficjam.ui.theme.Sunset
@@ -93,29 +94,39 @@ fun SplashScreen(onDone: (onboardingDone: Boolean) -> Unit) {
 
         // Road with traffic
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(300.dp)) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF8BC34A), Color(0xFF558B2F))), Offset(0f, 0f), Size(size.width, 50.dp.toPx()))
-                val top = 40.dp.toPx()
-                drawRect(Color(0xFF5B6270), Offset(0f, top), Size(size.width, 110.dp.toPx()))
-                drawRect(Color.White, Offset(0f, top + 4.dp.toPx()), Size(size.width, 3.dp.toPx()))
-                drawRect(Color.White, Offset(0f, top + 103.dp.toPx()), Size(size.width, 3.dp.toPx()))
-                val step = 46.dp.toPx()
-                drawLine(
-                    Color(0xFFFFD54F), Offset(-step + dash * step, top + 55.dp.toPx()), Offset(size.width + step, top + 55.dp.toPx()),
-                    4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(24.dp.toPx(), 22.dp.toPx())),
-                )
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF7CB342), Color(0xFF33691E))), Offset(0f, top + 110.dp.toPx()), Size(size.width, size.height))
-            }
             val carT = rememberInfiniteTransition(label = "cars")
-            val x1 by carT.animateFloat(-0.3f, 1.3f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "x1")
-            val x2 by carT.animateFloat(1.3f, -0.3f, infiniteRepeatable(tween(3400, easing = LinearEasing)), label = "x2")
+            val x1 by carT.animateFloat(-0.3f, 1.3f, infiniteRepeatable(tween(3600, easing = LinearEasing)), label = "x1")
+            val x2 by carT.animateFloat(1.3f, -0.3f, infiniteRepeatable(tween(4600, easing = LinearEasing)), label = "x2")
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width
+                fun d(v: Float) = v.dp.toPx()
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF8BC34A), Color(0xFF558B2F))), Offset(0f, 0f), Size(w, d(50f)))
+                val top = d(40f)
+                drawRect(Color(0xFF3C414B), Offset(0f, top), Size(w, d(110f)))
+                drawRect(Color.White, Offset(0f, top + d(4f)), Size(w, d(3f)))
+                drawRect(Color.White, Offset(0f, top + d(103f)), Size(w, d(3f)))
+                val step = d(46f)
+                drawLine(
+                    Color(0xFFFFD54F), Offset(-step + dash * step, top + d(55f)), Offset(w + step, top + d(55f)),
+                    d(4f), pathEffect = PathEffect.dashPathEffect(floatArrayOf(d(24f), d(22f))),
+                )
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF7CB342), Color(0xFF33691E))), Offset(0f, top + d(110f)), Size(w, size.height))
+            }
+            // Road runs 40–150dp with the yellow line at 95dp. Top lane (right-going) above it,
+            // bottom lane (left-going) below it.
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val w = constraints.maxWidth.toFloat()
-                Box(Modifier.offset(y = 38.dp).graphicsLayer { translationX = x2 * w }) {
-                    VehicleSprite(VehicleType.BUS, JamColor.YELLOW.ordinal, Skin.CLASSIC, 13.dp, rotation = -90f)
+                // Top lane (above the yellow line at 95dp): right-going, clears the line.
+                Box(Modifier.fillMaxWidth().height(46.dp).offset(y = 42.dp)) {
+                    Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x1 * w }) {
+                        VehicleSprite(VehicleType.CAR, JamColor.RED.ordinal, Skin.CLASSIC, 10.dp, rotation = 90f)
+                    }
                 }
-                Box(Modifier.offset(y = 100.dp).graphicsLayer { translationX = x1 * w }) {
-                    VehicleSprite(VehicleType.CAR, JamColor.RED.ordinal, Skin.CLASSIC, 13.dp, rotation = 90f)
+                // Bottom lane (below the yellow line): left-going, clears the line.
+                Box(Modifier.fillMaxWidth().height(46.dp).offset(y = 92.dp)) {
+                    Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x2 * w }) {
+                        VehicleSprite(VehicleType.CAR, JamColor.YELLOW.ordinal, Skin.CLASSIC, 10.dp, rotation = -90f)
+                    }
                 }
             }
             Mascot(110.dp, Modifier.align(Alignment.TopEnd).offset(x = (-14).dp, y = (-86).dp))

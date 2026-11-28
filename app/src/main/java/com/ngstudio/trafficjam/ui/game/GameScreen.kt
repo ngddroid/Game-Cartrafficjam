@@ -103,6 +103,7 @@ import com.ngstudio.trafficjam.ui.components.Icon
 import com.ngstudio.trafficjam.ui.components.LocalAudio
 import com.ngstudio.trafficjam.ui.components.OutlinedText
 import com.ngstudio.trafficjam.ui.components.RibbonBanner
+import com.ngstudio.trafficjam.ui.components.GearButton
 import com.ngstudio.trafficjam.ui.components.RoundButton
 import com.ngstudio.trafficjam.ui.components.StarRow
 import com.ngstudio.trafficjam.ui.components.WatchAdDialog
@@ -456,7 +457,7 @@ internal fun Hud(title: String, difficulty: Difficulty, coins: Int, onPause: () 
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RoundButton(onPause, size = 44.dp) { GameIcon(Icon.GEAR, 30.dp) }
+        GearButton(onPause, size = 44.dp)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(

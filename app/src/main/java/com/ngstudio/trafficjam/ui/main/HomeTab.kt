@@ -64,6 +64,7 @@ import com.ngstudio.trafficjam.game.render.Themes
 import com.ngstudio.trafficjam.ui.components.AvatarTile
 import com.ngstudio.trafficjam.ui.components.ButtonColor
 import com.ngstudio.trafficjam.ui.components.CoinPill
+import com.ngstudio.trafficjam.ui.components.drawRoadCar
 import com.ngstudio.trafficjam.ui.components.GameButton
 import com.ngstudio.trafficjam.ui.components.GameDialog
 import com.ngstudio.trafficjam.ui.components.GameIcon
@@ -73,7 +74,7 @@ import com.ngstudio.trafficjam.ui.components.Icon
 import com.ngstudio.trafficjam.ui.components.LocalAudio
 import com.ngstudio.trafficjam.ui.components.Mascot
 import com.ngstudio.trafficjam.ui.components.OutlinedText
-import com.ngstudio.trafficjam.ui.components.RoundButton
+import com.ngstudio.trafficjam.ui.components.GearButton
 import com.ngstudio.trafficjam.ui.components.VehicleSprite
 import com.ngstudio.trafficjam.ui.components.WorldArt
 import com.ngstudio.trafficjam.ui.theme.GameText
@@ -105,7 +106,7 @@ fun HomeTab(player: PlayerState, onPlay: () -> Unit, onSettings: () -> Unit, onW
                 Spacer(Modifier.width(10.dp))
                 CoinPill(player.coins)
                 Spacer(Modifier.weight(1f))
-                RoundButton(onSettings, size = 48.dp) { GameIcon(Icon.GEAR, 32.dp) }
+                GearButton(onSettings, size = 44.dp)
             }
             Spacer(Modifier.height(4.dp))
             GameLogo(Modifier.align(Alignment.CenterHorizontally), scale = 0.82f)
@@ -182,7 +183,7 @@ fun HomeTab(player: PlayerState, onPlay: () -> Unit, onSettings: () -> Unit, onW
         Column(Modifier.align(Alignment.CenterStart).padding(start = 10.dp).offset(y = 112.dp)) {
             SideButton(Icon.GIFT, "Daily", badge = progress.dailyAvailable) { showDaily = true }
         }
-        Mascot(96.dp, Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).offset(y = 112.dp))
+        Mascot(78.dp, Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).offset(y = 78.dp))
     }
 
     DailyDialog(showDaily, onClose = { showDaily = false })
@@ -219,30 +220,43 @@ private fun TrafficStrip() {
     val t = rememberInfiniteTransition(label = "traffic")
     val a by t.animateFloat(0f, 1f, infiniteRepeatable(tween(5200, easing = LinearEasing)), label = "a")
     val b by t.animateFloat(0f, 1f, infiniteRepeatable(tween(3800, easing = LinearEasing)), label = "b")
-    Box(Modifier.fillMaxWidth().height(96.dp)) {
+    Box(Modifier.fillMaxWidth().height(150.dp)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRect(Color(0xFF8BC34A), Offset(0f, 0f), Size(size.width, 10.dp.toPx()))
-            drawRect(Color(0xFF5B6270), Offset(0f, 10.dp.toPx()), Size(size.width, 76.dp.toPx()))
-            drawRect(Color.White, Offset(0f, 12.dp.toPx()), Size(size.width, 2.dp.toPx()))
-            drawRect(Color.White, Offset(0f, 82.dp.toPx()), Size(size.width, 2.dp.toPx()))
+            val wd = size.width
+            fun d(v: Float) = v.dp.toPx()
+            // Grass verge, dark asphalt, crisp white edge lines and a golden dashed centre line (75dp).
+            drawRect(Color(0xFF63B83F), Offset(0f, 0f), Size(wd, d(14f)))
+            drawRect(Color(0xFF3C414B), Offset(0f, d(14f)), Size(wd, d(122f)))
+            drawRect(Color.White, Offset(0f, d(16f)), Size(wd, d(3f)))
+            drawRect(Color.White, Offset(0f, d(133f)), Size(wd, d(3f)))
             drawLine(
-                Color(0xFFFFD54F), Offset(0f, 48.dp.toPx()), Offset(size.width, 48.dp.toPx()), 3.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(18.dp.toPx(), 14.dp.toPx())),
+                Color(0xFFFFC21A), Offset(0f, d(75f)), Offset(wd, d(75f)), d(5f),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(d(26f), d(22f))),
             )
-            drawRect(Color(0xFF7CB342), Offset(0f, 86.dp.toPx()), Size(size.width, 10.dp.toPx()))
+            drawRect(Color(0xFF58AE37), Offset(0f, d(136f)), Size(wd, d(14f)))
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val w = constraints.maxWidth.toFloat()
-            val pad = w * 0.35f
+            val pad = w * 0.4f
             fun x(p: Float) = -pad + p * (w + pad * 2)
-            Box(Modifier.offset(y = 14.dp).graphicsLayer { translationX = x(a) }) {
-                VehicleSprite(VehicleType.VAN, JamColor.GREEN.ordinal, Skin.CLASSIC, 11.dp, rotation = 90f)
+            // Top lane (above the yellow line, 75dp): traffic flows left → right, facing right.
+            // Smaller sprites in a band that ends above the line, so they clear it with margin.
+            Box(Modifier.fillMaxWidth().height(46.dp).offset(y = 18.dp)) {
+                Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x(a) }) {
+                    VehicleSprite(VehicleType.VAN, JamColor.GREEN.ordinal, Skin.CLASSIC, 10.dp, rotation = 90f)
+                }
+                Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x((a + 0.55f) % 1f) }) {
+                    VehicleSprite(VehicleType.CAR, JamColor.YELLOW.ordinal, Skin.CLASSIC, 10.dp, rotation = 90f)
+                }
             }
-            Box(Modifier.offset(y = 46.dp).graphicsLayer { translationX = x(1f - b) }) {
-                VehicleSprite(VehicleType.BUS, JamColor.BLUE.ordinal, Skin.CLASSIC, 11.dp, rotation = -90f)
-            }
-            Box(Modifier.offset(y = 14.dp).graphicsLayer { translationX = x((a + 0.5f) % 1f) }) {
-                VehicleSprite(VehicleType.CAR, JamColor.PINK.ordinal, Skin.CLASSIC, 11.dp, rotation = 90f)
+            // Bottom lane (below the yellow line): traffic flows right → left, facing left.
+            Box(Modifier.fillMaxWidth().height(46.dp).offset(y = 80.dp)) {
+                Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x(1f - b) }) {
+                    VehicleSprite(VehicleType.BUS, JamColor.BLUE.ordinal, Skin.CLASSIC, 10.dp, rotation = -90f)
+                }
+                Box(Modifier.align(Alignment.CenterStart).graphicsLayer { translationX = x((1f - b + 0.55f) % 1f) }) {
+                    VehicleSprite(VehicleType.CAR, JamColor.RED.ordinal, Skin.CLASSIC, 10.dp, rotation = -90f)
+                }
             }
         }
     }

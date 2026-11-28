@@ -9,8 +9,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -185,9 +188,10 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     override fun layout() {
         grain = (width - 24 * u) / GW
         picLeft = 12 * u
-        picTop = topInset + 58 * u
+        // Sit clear below the HUD so the pause button never overlaps the frame.
+        picTop = topInset + 74 * u
         picBottom = picTop + grain * GH
-        beltTop = picBottom + 2 * u
+        beltTop = picBottom + 12 * u
         beltBottom = beltTop + 42 * u
         beltY = (beltTop + beltBottom) / 2
         margin = 70 * u
@@ -676,11 +680,17 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
         }
         translate(screenShake.x, screenShake.y) {
             drawImage(bg)
-            drawImage(
-                image, IntOffset.Zero, IntSize(GW, GH),
-                IntOffset(picLeft.roundToInt(), picTop.roundToInt()), IntSize((grain * GW).roundToInt(), (grain * GH).roundToInt()),
-                filterQuality = FilterQuality.Low,
-            )
+            // Clip the sand to the frame's rounded inner corners so it doesn't poke into them.
+            val picPath = Path().apply {
+                addRoundRect(RoundRect(picLeft, picTop, picLeft + grain * GW, picBottom, CornerRadius(14 * u)))
+            }
+            clipPath(picPath) {
+                drawImage(
+                    image, IntOffset.Zero, IntSize(GW, GH),
+                    IntOffset(picLeft.roundToInt(), picTop.roundToInt()), IntSize((grain * GW).roundToInt(), (grain * GH).roundToInt()),
+                    filterQuality = FilterQuality.Low,
+                )
+            }
             drawBelt()
             drawPill()
 
@@ -788,7 +798,8 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
     private fun DrawScope.beltBrackets() {
         for (left in listOf(true, false)) {
             val bx = if (left) 0f else width - 16 * u
-            val r = Rect(bx, beltTop - 14 * u, bx + 16 * u, beltBottom + 14 * u)
+            // Hug the belt only; don't poke up into the picture frame's bottom corners.
+            val r = Rect(bx, beltTop - 3 * u, bx + 16 * u, beltBottom + 12 * u)
             drawRoundRect(Color(0xFF1B2850), r.topLeft + Offset(0f, 3 * u), r.size, CornerRadius(8 * u))
             drawRoundRect(Brush.horizontalGradient(listOf(Color(0xFF3D5AA8), Color(0xFF26397A)), r.left, r.right), r.topLeft, r.size, CornerRadius(8 * u))
             drawRoundRect(Color.White, r.topLeft + Offset(3 * u, 3 * u), Size(r.width - 6 * u, r.height - 6 * u), CornerRadius(6 * u), style = Stroke(2 * u))
@@ -823,7 +834,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
 
     private fun DrawScope.paintScene() {
         val w = size.width
-        drawRect(Brush.verticalGradient(listOf(Color(0xFFDDE2EC), Color(0xFFCDD4E1))))
+        drawRect(Brush.verticalGradient(listOf(Color(0xFFE7E9F4), Color(0xFFD3D8E8))))
+        // Soft overhead glow so the scene isn't a flat wash.
+        drawRect(Brush.radialGradient(listOf(Color(0x30FFFFFF), Color.Transparent), Offset(w / 2, picTop + 40 * u), w * 0.9f))
         // Thick white picture frame with a soft drop shadow.
         val frame = Rect(picLeft - 9 * u, picTop - 9 * u, picLeft + grain * GW + 9 * u, picBottom + 6 * u)
         drawRoundRect(Color(0x26000000), frame.topLeft + Offset(0f, 6 * u), frame.size, CornerRadius(24 * u))
@@ -849,13 +862,24 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
             drawLine(Color.White, Offset(cx - 5 * u, laneY + 4.5f * u), Offset(cx, laneY), 2.2f * u, StrokeCap.Round)
             cx += 20 * u
         }
-        // The lot is open ground: just a soft shadow under the jam so it doesn't float.
+        // A soft parking board under the jam, so the puzzle reads as a designed stage.
+        val lr = lotRect
+        val lcr = CornerRadius(30 * u)
+        drawRoundRect(Color(0x22101F42), lr.topLeft + Offset(0f, 7 * u), lr.size, lcr)
+        drawRoundRect(
+            Brush.verticalGradient(listOf(Color(0xFFF4F6FC), Color(0xFFDCE1EF)), lr.top, lr.bottom),
+            lr.topLeft, lr.size, lcr,
+        )
+        // Crisp rim gives the board a moulded edge.
+        drawRoundRect(Color(0xFFC3CBDE), lr.topLeft, lr.size, lcr, style = Stroke(1.8f * u))
+
+        // Soft shadow under the jam so the vehicles sit on the board rather than float.
         val minX = trucks.minOf { boardToScreen(it.spec.x.toFloat(), 0f).x }
         val maxX = trucks.maxOf { boardToScreen((it.spec.x + it.spec.w).toFloat(), 0f).x }
         val minY = trucks.minOf { boardToScreen(0f, it.spec.y.toFloat()).y }
         val maxY = trucks.maxOf { boardToScreen(0f, (it.spec.y + it.spec.h).toFloat()).y }
         drawOval(
-            Brush.radialGradient(listOf(Color(0x1A1B2850), Color.Transparent), Offset((minX + maxX) / 2, (minY + maxY) / 2), (maxX - minX) * 0.7f),
+            Brush.radialGradient(listOf(Color(0x24101F42), Color.Transparent), Offset((minX + maxX) / 2, (minY + maxY) / 2), (maxX - minX) * 0.7f),
             Offset(minX - 20 * u, minY - 16 * u), Size(maxX - minX + 40 * u, maxY - minY + 32 * u),
         )
     }
@@ -946,8 +970,9 @@ class SandEngine(level: Int, private val skin: Skin, fx: GameFx) : ModeEngine(le
                 }
                 val stroke = sin(x * 0.16f + y * 0.09f + 2.2f * sin(y * 0.045f + x * 0.012f))
                 val swirl = sin(x * 0.035f - y * 0.06f + 1.3f)
-                var shade = 5f + stroke * 0.75f + swirl * 0.6f
-                if (rng.nextInt(7) == 0) shade += if (rng.nextBoolean()) 0.6f else -0.6f
+                // Gentler brush shading + less speckle so the picture reads clearly.
+                var shade = 5f + stroke * 0.4f + swirl * 0.3f
+                if (rng.nextInt(10) == 0) shade += if (rng.nextBoolean()) 0.4f else -0.4f
                 when {
                     diff(1, 0) || diff(-1, 0) || diff(0, 1) || diff(0, -1) -> shade -= 3.2f
                     diff(-3, -3) || diff(-2, -2) -> shade += 1.4f

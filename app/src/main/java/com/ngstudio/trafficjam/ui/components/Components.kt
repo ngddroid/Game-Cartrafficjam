@@ -60,8 +60,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -113,13 +116,13 @@ fun OutlinedText(
             Text(
                 text,
                 Modifier.offset(y = extrude),
-                style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, drawStyle = stroke, shadow = null),
+                style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, lineHeight = fontSize * 1.3f, drawStyle = stroke, shadow = null),
                 textAlign = textAlign,
             )
-            Text(text, Modifier.offset(y = extrude), style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, shadow = null), textAlign = textAlign)
+            Text(text, Modifier.offset(y = extrude), style = style.copy(color = outline.shade(0.6f), fontSize = fontSize, lineHeight = fontSize * 1.3f, shadow = null), textAlign = textAlign)
         }
-        Text(text, style = style.copy(color = outline, fontSize = fontSize, drawStyle = stroke, shadow = null), textAlign = textAlign)
-        Text(text, style = style.copy(brush = face, fontSize = fontSize, shadow = null), textAlign = textAlign)
+        Text(text, style = style.copy(color = outline, fontSize = fontSize, lineHeight = fontSize * 1.3f, drawStyle = stroke, shadow = null), textAlign = textAlign)
+        Text(text, style = style.copy(brush = face, fontSize = fontSize, lineHeight = fontSize * 1.3f, shadow = null), textAlign = textAlign)
     }
 }
 
@@ -237,6 +240,95 @@ fun RoundButton(
         contentAlignment = Alignment.Center,
         content = content,
     )
+}
+
+/**
+ * The shared gear button (Home settings + in-game pause): a glossy blue rounded-square tile with a
+ * crisp white cog, a light bevel rim and a top gloss. Springs in on press with a tap haptic.
+ */
+@Composable
+fun GearButton(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 48.dp) {
+    val audio = LocalAudio.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val press by animateFloatAsState(if (pressed) 0.9f else 1f, spring(stiffness = Spring.StiffnessHigh), label = "gearBtn")
+    Box(
+        modifier
+            .size(size)
+            .scale(press)
+            .clickable(interaction, null) { audio.play(Sfx.Click); audio.haptic(Haptic.Tap); onClick() }
+            .drawBehind {
+                val w = this.size.width
+                val h = this.size.height
+                val corner = this.size.minDimension * 0.3f
+                val inset = 3.dp.toPx()
+                val faceCorner = corner - inset
+                val edge = Color(0xFF2B7FD6)
+                // Drop shadow, light bevel rim, glossy blue face.
+                drawRoundRect(Color.Black.copy(alpha = 0.2f), Offset(0f, 4.dp.toPx()), this.size, CornerRadius(corner))
+                drawRoundRect(Color(0xFFCFEBFF), Offset.Zero, this.size, CornerRadius(corner))
+                drawRoundRect(
+                    Brush.verticalGradient(listOf(Color(0xFF6CC0FB), Color(0xFF2B7FD6)), inset, h - inset),
+                    Offset(inset, inset), Size(w - 2 * inset, h - 2 * inset), CornerRadius(faceCorner),
+                )
+                // Top gloss highlight.
+                drawRoundRect(
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0f)), inset, h * 0.52f),
+                    Offset(inset + 3.dp.toPx(), inset + 2.dp.toPx()), Size(w - 2 * inset - 6.dp.toPx(), h * 0.42f), CornerRadius(faceCorner * 0.8f),
+                )
+                // White cog with a blue hub, and a subtle darker-blue outline.
+                val c = center
+                val gr = this.size.minDimension * 0.26f
+                val rMid = gr * 0.92f
+                val tw = gr * 0.5f
+                val th = gr * 0.56f
+                fun cog(color: Color, grow: Float, bodyR: Float) {
+                    for (i in 0 until 8) {
+                        rotate(i * 45f, c) {
+                            drawRoundRect(color, Offset(c.x - (tw + grow) / 2, c.y - rMid - (th + grow) / 2), Size(tw + grow, th + grow), CornerRadius((tw + grow) * 0.3f))
+                        }
+                    }
+                    drawCircle(color, bodyR, c)
+                }
+                cog(edge, 2.4.dp.toPx(), gr * 0.86f)
+                cog(Color.White, 0f, gr * 0.82f)
+                drawCircle(edge, gr * 0.3f, c)
+            },
+    )
+}
+
+/**
+ * A small top-down toy car for the decorative road strips, drawn centred exactly at [center] so it
+ * can be placed precisely inside a lane. [facingRight] points the arrow (and the car's direction).
+ */
+fun DrawScope.drawRoadCar(center: Offset, length: Float, color: Color, facingRight: Boolean) {
+    val wid = length * 0.52f
+    val left = center.x - length / 2
+    val top = center.y - wid / 2
+    // Soft shadow.
+    drawRoundRect(Color.Black.copy(alpha = 0.18f), Offset(left + 2f, top + wid * 0.28f + 3f), Size(length, wid), CornerRadius(wid * 0.44f))
+    // Body with a rim and a vertical gloss.
+    drawRoundRect(color.shade(0.7f), Offset(left, top), Size(length, wid), CornerRadius(wid * 0.44f))
+    drawRoundRect(
+        Brush.verticalGradient(listOf(color.tint(0.3f), color, color.shade(0.82f)), top, top + wid),
+        Offset(left + length * 0.02f, top + wid * 0.08f), Size(length * 0.96f, wid * 0.84f), CornerRadius(wid * 0.38f),
+    )
+    // Roof patch and a windshield toward the front.
+    drawRoundRect(color.tint(0.12f), Offset(left + length * 0.3f, top + wid * 0.18f), Size(length * 0.4f, wid * 0.64f), CornerRadius(wid * 0.22f))
+    val wsx = if (facingRight) left + length * 0.6f else left + length * 0.24f
+    drawRoundRect(Color(0xFFCFE9FF), Offset(wsx, top + wid * 0.22f), Size(length * 0.16f, wid * 0.56f), CornerRadius(wid * 0.12f))
+    // White direction arrow in the middle.
+    val dir = if (facingRight) 1f else -1f
+    val ah = wid * 0.24f
+    val ax = center.x - dir * length * 0.04f
+    val head = Path().apply {
+        moveTo(ax + dir * ah * 1.0f, center.y)
+        lineTo(ax - dir * ah * 0.3f, center.y - ah)
+        lineTo(ax - dir * ah * 0.3f, center.y + ah)
+        close()
+    }
+    drawLine(Color.White, Offset(ax - dir * ah * 0.2f, center.y), Offset(ax - dir * ah * 1.4f, center.y), ah * 0.7f, StrokeCap.Round)
+    drawPath(head, Color.White)
 }
 
 @Composable

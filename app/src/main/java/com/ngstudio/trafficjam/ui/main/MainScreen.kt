@@ -212,6 +212,9 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                 )
             }
             .navigationBarsPadding()
+            // Always keep a little room below the labels, even on gesture-nav devices where the
+            // system inset is almost zero.
+            .padding(bottom = 10.dp)
             .height(80.dp),
     ) {
         Row(Modifier.fillMaxSize()) {
@@ -249,7 +252,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                 ) {
                     Box(
                         Modifier
-                            .offset(y = (-2).dp - 9.dp * on)
+                            .offset(y = (-2).dp - 11.dp * on)
                             .graphicsLayer { val k = 1f + 0.12f * on; scaleX = k; scaleY = k },
                     ) {
                         GameIcon(t.icon, 42.dp)
@@ -257,7 +260,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
                     if (on > 0.5f) {
                         OutlinedText(
                             t.label,
-                            Modifier.align(Alignment.BottomCenter).padding(bottom = 7.dp).graphicsLayer { alpha = (on - 0.5f) * 2f },
+                            Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp).graphicsLayer { alpha = (on - 0.5f) * 2f },
                             style = GameText.Button, fontSize = 15.sp, strokeWidth = 6f, outline = NavInk, depth = 0.07f,
                         )
                     }

@@ -180,26 +180,10 @@ private fun DrawScope.drawTown(top: Color, mid: Color, bottom: Color, drift: Flo
     hill(frontHill, 22 * u, 2.4f, Color(0xFF5FC15A), Color(0xFF8FDC6E))
     for (tr in layout.trees) if (tr[2] == 1f) tree(tr[0] * w, frontHill - 6 * u, tr[1] * 1.15f * u)
 
-    // Road with lane dashes and toy cars.
-    val roadTop = frontHill + 40 * u
-    val roadH = 46 * u
-    drawRect(Color(0xFF6E5A4E), Offset(0f, roadTop - 5 * u), Size(w, 5 * u))
-    drawRect(Brush.verticalGradient(listOf(Color(0xFF5B5F6B), Color(0xFF4A4E59)), roadTop, roadTop + roadH), Offset(0f, roadTop), Size(w, roadH))
-    drawRect(Color.White.copy(alpha = 0.85f), Offset(0f, roadTop + 3 * u), Size(w, 2 * u))
-    var dx = -((traffic * 3f) % 1f) * 40 * u
-    while (dx < w) {
-        drawRoundRect(Color(0xFFFFD54F), Offset(dx, roadTop + roadH / 2 - 1.5f * u), Size(22 * u, 3 * u), CornerRadius(1.5f * u))
-        dx += 40 * u
-    }
-    for (i in 0 until 3) {
-        val dir = if (i % 2 == 0) 1 else -1
-        val laneY = roadTop + if (dir > 0) roadH * 0.72f else roadH * 0.3f
-        val k = (traffic * (1f + i * 0.35f) + i * 0.37f) % 1f
-        val x = if (dir > 0) -40 * u + k * (w + 80 * u) else w + 40 * u - k * (w + 80 * u)
-        toyCar(Offset(x, laneY), carColors[(i * 2) % carColors.size], dir, u)
-    }
-    // Grass verge below the road.
-    drawRect(Brush.verticalGradient(listOf(Color(0xFF4FAE4C), Color(0xFF3E9A42)), roadTop + roadH, h), Offset(0f, roadTop + roadH), Size(w, h - roadTop - roadH))
+    // Plain grassland below the hills — the Home screen overlays its own road strip, so there is
+    // no second road here.
+    val grassTop = frontHill + 35 * u
+    drawRect(Brush.verticalGradient(listOf(Color(0xFF5FC15A), Color(0xFF43984A)), grassTop, h), Offset(0f, grassTop), Size(w, h - grassTop))
 }
 
 private fun DrawScope.tree(x: Float, groundY: Float, s: Float) {

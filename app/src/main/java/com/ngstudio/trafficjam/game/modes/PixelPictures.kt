@@ -388,9 +388,9 @@ object PixelPictures {
             "....OYYYYYO....",
             "....OYYYYYO....",
             "...OYYYOYYYO...",
+            "..OYYYO.OYYYO..",
             "..OYYO...OYYO..",
             "..OYO.....OYO..",
-            ".OO.........OO.",
         ),
         pic(
             "Moon", 'V',
